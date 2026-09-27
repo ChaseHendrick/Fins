@@ -51,7 +51,7 @@ jobs:
             - Windows: the installer .exe, or the portable .exe that runs without installing.
             - Linux: the .AppImage. Mark it executable, then run it.
 
-            Or play in a browser: https://sharpmeow.github.io/Fins/
+            Or play in a browser: https://chasehendrick.github.io/Fins/
           files: |
             dist/*.dmg
             dist/*.zip

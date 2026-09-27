@@ -24,7 +24,7 @@ You open in Year 1000. The tanks are already running. People come in off the str
 
 Most idle games are a number that goes up while you are in another tab. Fin's is a room you can fail in. The water has a temperature. The baker on the next block remembers the last fish bag. A named fish will not sell if it is holding too still. A thousand years of people already lived on this street before you hung the sign, and they did not stop when the clock hit present day.
 
-**[Play in your browser](https://sharpmeow.github.io/Fins/)** · [Download for Mac, Windows or Linux](https://github.com/SharpMeow/Fins/releases) · [Contribute](CONTRIBUTING.md)
+**[Play in your browser](https://chasehendrick.github.io/Fins/)** · [Download for Mac, Windows or Linux](https://github.com/SharpMeow/Fins/releases) · [Contribute](CONTRIBUTING.md)
 
 The source is public under [PolyForm Small Business 1.0.0](LICENSE): free to use, change and share if you are an individual, or if your company has fewer than 100 people and less than 1,000,000 USD of revenue in its prior tax year. The license has the details.
 
@@ -340,7 +340,7 @@ Boston is one port. Four more engines keep the rest of the continent. The choir 
 
 ## Three ways to play
 
-**In a tab.** Play at [sharpmeow.github.io/Fins](https://sharpmeow.github.io/Fins/), which the **pages** workflow publishes from `main`. Or serve `game/` yourself and open `index.html`. Same shop.
+**In a tab.** Play at [chasehendrick.github.io/Fins](https://chasehendrick.github.io/Fins/), which the **pages** workflow publishes from `main`. Or serve `game/` yourself and open `index.html`. Same shop.
 
 **As a window.** Chromium without the browser chrome. No tab sleeping. F11 is fullscreen. Mac, Windows, Linux — one source, three packages.
 
