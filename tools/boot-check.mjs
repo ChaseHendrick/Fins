@@ -52,6 +52,7 @@ await new Promise((r) => server.listen(PORT, "127.0.0.1", r));
 
 const fatal = [];
 const browser = await chromium.launch({
+  executablePath: process.env.FINS_BROWSER_PATH || undefined,
   args: [
     "--autoplay-policy=no-user-gesture-required",
     "--use-gl=swiftshader",

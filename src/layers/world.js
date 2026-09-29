@@ -53,28 +53,27 @@
     ctx.restore();
     return true;
   };
-  // Quads match compose_shop_tanks.py (tl,tr,br,bl), normalized to the shop photo.
-  // Door keepout x>=0.82. Window keepout x<=0.155. Sign covers B-t0.
+  // Glass corners measured on art/shop-interior.jpg v5 (tl,tr,br,bl).
+  // Back-right and island glass each share two stock slots. See docs/polish.md.
   var SHOP_WALL = [
     { id: "L-top", key: "reef", kind: "side", tint: "rgba(20,70,150,.22)", rim: "rgba(90,180,255,.7)", fill: "#12324a",
-      q: [0.162, 0.198, 0.248, 0.228, 0.250, 0.348, 0.158, 0.342] },
+      q: [0.1925, 0.1667, 0.3265, 0.2034, 0.3265, 0.3423, 0.1925, 0.3323] },
     { id: "L-bot", key: "betta", kind: "side", tint: "rgba(90,20,30,.28)", rim: "rgba(220,80,90,.7)", fill: "#2a1210",
-      q: [0.162, 0.352, 0.250, 0.358, 0.248, 0.508, 0.160, 0.528] },
+      q: [0.1925, 0.4018, 0.3265, 0.4067, 0.3265, 0.5506, 0.1925, 0.5456] },
     { id: "island", key: "planted", kind: "island", tint: "rgba(40,110,80,.22)", rim: "rgba(140,210,160,.7)", fill: "#16382c",
-      q: [0.302, 0.398, 0.502, 0.378, 0.518, 0.558, 0.292, 0.582] },
+      q: [0.3376, 0.4762, 0.4869, 0.4762, 0.4869, 0.6647, 0.3376, 0.6647] },
     { id: "B-t0", key: "goldfish", kind: "back", tint: "rgba(180,120,40,.2)", rim: "rgba(240,190,90,.7)", fill: "#4a3214",
-      q: [0.498, 0.168, 0.585, 0.178, 0.588, 0.278, 0.496, 0.272] },
+      q: [0.3348, 0.2758, 0.4743, 0.2758, 0.4743, 0.4167, 0.3348, 0.4167] },
     { id: "B-t1", key: "cichlid", kind: "back", tint: "rgba(80,90,100,.18)", rim: "rgba(190,200,210,.7)", fill: "#3a3a32",
-      q: [0.592, 0.178, 0.675, 0.190, 0.678, 0.282, 0.590, 0.278] },
+      q: [0.4743, 0.2758, 0.5999, 0.2758, 0.5999, 0.4167, 0.4743, 0.4167] },
     { id: "B-t2", key: "discus", kind: "back", tint: "rgba(40,90,70,.2)", rim: "rgba(120,190,150,.7)", fill: "#1c3328",
-      q: [0.682, 0.190, 0.758, 0.206, 0.760, 0.288, 0.680, 0.282] },
+      q: [0.6166, 0.25, 0.71985, 0.25, 0.71985, 0.4315, 0.6166, 0.4315] },
     { id: "B-b0", key: "shrimp", kind: "back", tint: "rgba(50,120,70,.2)", rim: "rgba(110,200,130,.7)", fill: "#1e3a24",
-      q: [0.496, 0.278, 0.588, 0.282, 0.590, 0.398, 0.492, 0.408] },
+      q: [0.4869, 0.4762, 0.6362, 0.4762, 0.6362, 0.6647, 0.4869, 0.6647] },
     { id: "B-b1", key: "quarantine", kind: "back", tint: "rgba(90,110,120,.16)", rim: "rgba(180,200,210,.65)", fill: "#2a3438",
-      q: [0.590, 0.282, 0.678, 0.286, 0.680, 0.392, 0.588, 0.400] },
+      q: [0.71985, 0.25, 0.8231, 0.25, 0.8231, 0.4315, 0.71985, 0.4315] },
   ];
-  // Overlay play tanks: wall glass only, no overlap with the aisle island or the door.
-  // Skip island (people walk the aisle) and B-t0 (behind the hanging sign) and B-b0 (hidden by the island).
+  // Keep the eight existing stock categories in their original slot order.
   var SHOP_PLAY = [0, 1, 2, 3, 4, 5, 6, 7];
 
   function wallOf(i) {
@@ -164,7 +163,7 @@
   window.shopPlayTank = function (i, W, top, canvasH) {
     var wall = wallOf(i);
     var ph = Math.max(24, (canvasH || 1) - top);
-    var nq = insetNorm(wall.q, wall.kind === "side" ? 0.1 : 0.08);
+    var nq = insetNorm(wall.q, 0);
     var q = quadToCanvas(nq, W, top, ph);
     var box = aabbOf(q);
     return {
@@ -235,6 +234,9 @@
 
   window.drawShopTankInterior = function (ctx, x, y, w, h, idx) {
     if (!ctx || w < 8 || h < 8) return;
+    // The painted room already contains glass and interiors at these corners.
+    // Only living fish and water belong on top of it. Use plates for the fallback room.
+    if (shopBg.complete && shopBg.naturalWidth) return;
     var wall = wallOf(idx);
     ctx.save();
     ctx.beginPath();
@@ -1037,53 +1039,55 @@
         ctx.restore();
       }
 
-      ctx.save();
-      if (q && q.length >= 8) {
-        ctx.beginPath();
-        ctx.moveTo(q[0], q[1]);
-        ctx.lineTo(q[2], q[3]);
-        ctx.lineTo(q[2] + 6, q[3] - 5);
-        ctx.lineTo(q[0] + 4, q[1] - 6);
-        ctx.closePath();
-        ctx.fillStyle = "rgba(210,232,245," + (0.1 + 0.04 * Math.sin((t || 0) + i)).toFixed(3) + ")";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(q[2], q[3]);
-        ctx.lineTo(q[4], q[5]);
-        ctx.lineTo(q[4] + 7, q[5] - 1);
-        ctx.lineTo(q[2] + 7, q[3] - 4);
-        ctx.closePath();
-        ctx.fillStyle = "rgba(6,14,24,.32)";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(q[6], q[7]);
-        ctx.lineTo(q[4], q[5]);
-        ctx.lineTo(q[4] + 3, q[5] + 9);
-        ctx.lineTo(q[6] - 2, q[7] + 10);
-        ctx.closePath();
-        ctx.fillStyle = "rgba(4,8,12,.38)";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(q[0], q[1]);
-        ctx.lineTo(q[2], q[3]);
-        ctx.lineTo(q[4], q[5]);
-        ctx.lineTo(q[6], q[7]);
-        ctx.closePath();
-        ctx.strokeStyle = "rgba(190,230,255,.5)";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      } else {
-        ctx.fillStyle = "rgba(8,16,26,.4)";
-        ctx.fillRect(tx + tw - 6, ty + th * 0.1, 6, th * 0.76);
-        ctx.fillStyle = "rgba(200,230,245,.14)";
-        ctx.fillRect(tx + 2, ty + th * 0.07, tw - 4, 5);
-        ctx.strokeStyle = "rgba(190,230,255,.42)";
-        ctx.lineWidth = 1.2;
-        ctx.strokeRect(tx + 2, ty + th * 0.08, tw - 4, th * 0.78);
-        ctx.fillStyle = "rgba(0,0,0,.3)";
-        ctx.fillRect(tx + 10, ty + th * 0.86, tw - 16, 7);
+      if (!live) {
+        ctx.save();
+        if (q && q.length >= 8) {
+          ctx.beginPath();
+          ctx.moveTo(q[0], q[1]);
+          ctx.lineTo(q[2], q[3]);
+          ctx.lineTo(q[2] + 6, q[3] - 5);
+          ctx.lineTo(q[0] + 4, q[1] - 6);
+          ctx.closePath();
+          ctx.fillStyle = "rgba(210,232,245," + (0.1 + 0.04 * Math.sin((t || 0) + i)).toFixed(3) + ")";
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(q[2], q[3]);
+          ctx.lineTo(q[4], q[5]);
+          ctx.lineTo(q[4] + 7, q[5] - 1);
+          ctx.lineTo(q[2] + 7, q[3] - 4);
+          ctx.closePath();
+          ctx.fillStyle = "rgba(6,14,24,.32)";
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(q[6], q[7]);
+          ctx.lineTo(q[4], q[5]);
+          ctx.lineTo(q[4] + 3, q[5] + 9);
+          ctx.lineTo(q[6] - 2, q[7] + 10);
+          ctx.closePath();
+          ctx.fillStyle = "rgba(4,8,12,.38)";
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(q[0], q[1]);
+          ctx.lineTo(q[2], q[3]);
+          ctx.lineTo(q[4], q[5]);
+          ctx.lineTo(q[6], q[7]);
+          ctx.closePath();
+          ctx.strokeStyle = "rgba(190,230,255,.5)";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = "rgba(8,16,26,.4)";
+          ctx.fillRect(tx + tw - 6, ty + th * 0.1, 6, th * 0.76);
+          ctx.fillStyle = "rgba(200,230,245,.14)";
+          ctx.fillRect(tx + 2, ty + th * 0.07, tw - 4, 5);
+          ctx.strokeStyle = "rgba(190,230,255,.42)";
+          ctx.lineWidth = 1.2;
+          ctx.strokeRect(tx + 2, ty + th * 0.08, tw - 4, th * 0.78);
+          ctx.fillStyle = "rgba(0,0,0,.3)";
+          ctx.fillRect(tx + 10, ty + th * 0.86, tw - 16, 7);
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
       // Floor caustic blob under each tank — skip on the photoreal floor.
       if (floorY && !(window.shopBg && shopBg.complete)) {
@@ -1234,21 +1238,232 @@
     return n / 4294967296;
   }
 
-  function drawMiniPerson(ctx, x, y, size, color, moving, walk) {
+  function drawMiniPerson(ctx, x, y, size, color, moving, walk, seed) {
     ctx.save();
     ctx.fillStyle = "rgba(8,4,0,.32)";
     ctx.beginPath();
     ctx.ellipse(x + 0.4, y + 0.6, size * 0.32, size * 0.12, 0, 0, 7);
     ctx.fill();
     var bob = moving ? Math.sin(((walk || 0) % 1) * Math.PI * 2) * size * 0.08 : 0;
+    var stride = moving ? Math.sin((walk || 0) * Math.PI * 2) * size * 0.12 : 0;
+    ctx.strokeStyle = "#34414b";
+    ctx.lineWidth = Math.max(1, size * 0.13);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x - size * 0.09, y - size * 0.2);
+    ctx.lineTo(x - size * 0.09 - stride, y);
+    ctx.moveTo(x + size * 0.09, y - size * 0.2);
+    ctx.lineTo(x + size * 0.09 + stride, y);
+    ctx.stroke();
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.ellipse(x, y - size * 0.32 + bob, size * 0.2, size * 0.42, 0, 0, 7);
+    ctx.ellipse(x, y - size * 0.4 + bob, size * 0.2, size * 0.27, 0, 0, 7);
     ctx.fill();
+    ctx.fillStyle = ["#d5a581", "#ad795a", "#edc4a0", "#795744"][(seed || 0) % 4];
     ctx.beginPath();
-    ctx.arc(x, y - size * 0.7 + bob, Math.max(1.1, size * 0.16), 0, 7);
+    ctx.arc(x, y - size * 0.76 + bob, Math.max(1.1, size * 0.15), 0, 7);
+    ctx.fill();
+    ctx.fillStyle = "#3c302c";
+    ctx.beginPath();
+    ctx.arc(x, y - size * 0.81 + bob, Math.max(1, size * 0.15), Math.PI, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+
+  // These are cartographic symbols at existing place anchors, not new geographic features.
+  // The single symbol scale deliberately exaggerates landmarks at neighborhood-map zoom.
+  var townLamp = null;
+  function townLampImage() {
+    if (townLamp) return townLamp;
+    townLamp = document.createElement("canvas");
+    townLamp.width = townLamp.height = 64;
+    var c = townLamp.getContext("2d");
+    var glow = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+    glow.addColorStop(0, "rgba(255,207,123,.55)");
+    glow.addColorStop(0.3, "rgba(255,190,100,.18)");
+    glow.addColorStop(1, "rgba(255,190,100,0)");
+    c.fillStyle = glow;
+    c.fillRect(0, 0, 64, 64);
+    return townLamp;
+  }
+
+  function townLandmark(ctx, x, y, size, id, lit) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size / 32, size / 32);
+    ctx.fillStyle = "rgba(6,14,23,.38)";
+    ctx.beginPath();
+    ctx.ellipse(3, 2, 18, 5, 0, 0, 7);
+    ctx.fill();
+    if (id === "shop") {
+      ctx.fillStyle = "#71534a";
+      ctx.beginPath();
+      ctx.moveTo(12, -19); ctx.lineTo(18, -23); ctx.lineTo(18, -4); ctx.lineTo(12, 0); ctx.fill();
+      ctx.fillStyle = "#bc9377";
+      ctx.fillRect(-13, -20, 26, 20);
+      ctx.fillStyle = "#46515a";
+      ctx.beginPath();
+      ctx.moveTo(-15, -20); ctx.lineTo(-8, -25); ctx.lineTo(18, -25); ctx.lineTo(13, -20); ctx.fill();
+      ctx.fillStyle = lit ? "#edc082" : "#b7d9dc";
+      ctx.fillRect(-10, -13, 12, 10);
+      ctx.fillStyle = "#263e43";
+      ctx.fillRect(5, -13, 5, 13);
+      ctx.fillStyle = "#37878c";
+      ctx.beginPath();
+      ctx.moveTo(-15, -16); ctx.lineTo(14, -16); ctx.lineTo(16, -12); ctx.lineTo(-17, -12); ctx.fill();
+      ctx.strokeStyle = "#b9d9ce";
+      ctx.lineWidth = 1;
+      for (var a = -11; a < 14; a += 6) {
+        ctx.beginPath(); ctx.moveTo(a, -16); ctx.lineTo(a - 1, -12); ctx.stroke();
+      }
+      ctx.fillStyle = "#f4c453";
+      ctx.fillRect(8, -7, 1, 1);
+    } else if (id === "oldnorth") {
+      ctx.fillStyle = "#b88972";
+      ctx.fillRect(-13, -13, 25, 13);
+      ctx.fillStyle = "#384752";
+      ctx.beginPath();
+      ctx.moveTo(-16, -13); ctx.lineTo(-2, -22); ctx.lineTo(15, -13); ctx.fill();
+      ctx.fillStyle = "#e2dfcf";
+      ctx.fillRect(-5, -31, 8, 20);
+      ctx.fillStyle = "#eff0e5";
+      ctx.beginPath();
+      ctx.moveTo(-6, -31); ctx.lineTo(-1, -43); ctx.lineTo(4, -31); ctx.fill();
+      ctx.fillStyle = lit ? "#f3c981" : "#435c66";
+      ctx.fillRect(-3, -26, 3, 5);
+      ctx.fillRect(-8, -9, 3, 5);
+      ctx.fillRect(4, -9, 3, 5);
+    } else if (id === "haymarket") {
+      for (var stall = 0; stall < 3; stall++) {
+        var ox = stall * 13 - 18;
+        ctx.fillStyle = "#956d4b";
+        ctx.fillRect(ox, -7, 11, 7);
+        ctx.fillStyle = stall % 2 ? "#bd7455" : "#478582";
+        ctx.beginPath();
+        ctx.moveTo(ox - 1, -8); ctx.lineTo(ox + 5, -15); ctx.lineTo(ox + 12, -8); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = "#d8cba9";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(ox, -8); ctx.lineTo(ox, 0); ctx.moveTo(ox + 10, -8); ctx.lineTo(ox + 10, 0); ctx.stroke();
+        ctx.fillStyle = "#9aaf6d";
+        ctx.fillRect(ox + 2, -5, 7, 2);
+      }
+    } else {
+      ctx.strokeStyle = "#8f7656";
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -15); ctx.stroke();
+      ctx.fillStyle = lit ? "#34584b" : "#558b65";
+      ctx.beginPath(); ctx.ellipse(-4, -18, 9, 10, -0.2, 0, 7); ctx.fill();
+      ctx.fillStyle = lit ? "#426b55" : "#75a27a";
+      ctx.beginPath(); ctx.ellipse(4, -22, 8, 9, 0.3, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function townLabels(ctx, labels, w, h) {
+    if (w < 160 || h < 120) return;
+    labels.sort(function (a, b) { return a.priority - b.priority; });
+    var placed = [];
+    var font = Math.max(9, Math.min(13, Math.round(w * 0.018)));
+    ctx.save();
+    ctx.font = "600 " + font + "px Nunito, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (var i = 0; i < labels.length; i++) {
+      var item = labels[i];
+      var text = item.text;
+      var maxWidth = w * (item.priority === 0 ? 0.55 : 0.44);
+      while (text.length > 5 && ctx.measureText(text).width > maxWidth) text = text.slice(0, -2);
+      if (text !== item.text) text += "…";
+      var bw = ctx.measureText(text).width + 14;
+      var bh = font + 9;
+      var offsets = [[0, -item.lift - bh - 5], [0, 7], [bw / 2 + 12, -bh / 2], [-bw / 2 - 12, -bh / 2]];
+      var box = null;
+      for (var k = 0; k < offsets.length; k++) {
+        var xx = Math.max(5, Math.min(w - bw - 5, item.x + offsets[k][0] - bw / 2));
+        var yy = Math.max(8, Math.min(h - bh - 36, item.y + offsets[k][1]));
+        var free = true;
+        for (var j = 0; j < placed.length; j++) {
+          var old = placed[j];
+          if (xx < old.x + old.w + 4 && xx + bw + 4 > old.x && yy < old.y + old.h + 4 && yy + bh + 4 > old.y) { free = false; break; }
+        }
+        if (free) { box = { x: xx, y: yy, w: bw, h: bh }; break; }
+      }
+      if (!box) continue;
+      placed.push(box);
+      var gold = item.priority === 0;
+      ctx.strokeStyle = gold ? "rgba(244,196,83,.74)" : "rgba(191,219,225,.4)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(item.x, item.y);
+      ctx.lineTo(Math.max(box.x + 5, Math.min(box.x + bw - 5, item.x)), Math.max(box.y, Math.min(box.y + bh, item.y)));
+      ctx.stroke();
+      ctx.fillStyle = gold ? "rgba(26,35,34,.96)" : "rgba(12,26,36,.88)";
+      ctx.beginPath(); ctx.roundRect(box.x, box.y, bw, bh, 5); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = gold ? "#f4d47d" : "#e2eae9";
+      ctx.fillText(text, box.x + bw / 2, box.y + bh / 2 + 0.5);
+    }
+    ctx.restore();
+  }
+
+  function townTraffic(ctx, x, y, angle, size, color, lit) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.scale(size / 16, size / 16);
+    ctx.fillStyle = "rgba(0,8,15,.35)";
+    ctx.beginPath(); ctx.roundRect(-8, -2, 17, 7, 3); ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.roundRect(-8, -3.5, 16, 7, 3); ctx.fill();
+    ctx.fillStyle = "#b7d3d6";
+    ctx.beginPath(); ctx.roundRect(-3, -2.8, 7, 5.6, 1.5); ctx.fill();
+    ctx.fillStyle = "#293e49";
+    ctx.fillRect(-0.7, -2.8, 2.5, 5.6);
+    ctx.fillStyle = lit ? "#fff0ba" : "#ded9b8";
+    ctx.fillRect(6, -2.7, 1.4, 1.2); ctx.fillRect(6, 1.5, 1.4, 1.2);
+    ctx.fillStyle = "#b96b56";
+    ctx.fillRect(-7.5, -2.7, 1, 1.2); ctx.fillRect(-7.5, 1.5, 1, 1.2);
+    ctx.restore();
+  }
+
+  // fins.js owns the person panel and selection. Its panel-map handler expects the old full-world
+  // coordinates, so forward a visible person's original coordinates to that same handler.
+  var townPanelHits = new WeakMap();
+  window.townPickAt = function (canvas, x, y) {
+    var data = townPanelHits.get(canvas);
+    if (!data || !isFinite(x) || !isFinite(y)) return -1;
+    var pick = -1, distance = Infinity;
+    for (var i = 0; i < data.hits.length; i++) {
+      var hit = data.hits[i];
+      var dist = Math.hypot(x - hit.x, y - hit.y + hit.size * 0.4);
+      if (dist < Math.max(8, hit.size * 0.7) && dist < distance) { distance = dist; pick = hit.i; }
+    }
+    return pick;
+  };
+  function townPanelPick(canvas, H, hits) {
+    if (!canvas || canvas.id !== "swmap") return;
+    var saved = townPanelHits.get(canvas);
+    if (!saved) {
+      saved = { H: H, hits: hits };
+      townPanelHits.set(canvas, saved);
+      canvas.addEventListener("click", function (event) {
+        var handler = canvas.onclick;
+        var data = townPanelHits.get(canvas);
+        if (typeof handler !== "function" || !data || !data.H) return;
+        var bounds = canvas.getBoundingClientRect();
+        if (!bounds.width || !bounds.height) return;
+        var x = (event.clientX - bounds.left) * canvas.width / bounds.width;
+        var y = (event.clientY - bounds.top) * canvas.height / bounds.height;
+        var pick = window.townPickAt(canvas, x, y);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        handler.call(canvas, {
+          clientX: bounds.left + (pick >= 0 ? data.H.x[pick] / 1000 : -1) * bounds.width,
+          clientY: bounds.top + (pick >= 0 ? data.H.y[pick] / 1000 : -1) * bounds.height,
+        });
+      }, true);
+    }
+    saved.H = H;
+    saved.hits = hits;
   }
 
   function hourOfDay() {
@@ -1301,6 +1516,7 @@
     var drawImage = ctx.drawImage;
     ctx.drawImage = function (img, dx, dy, dw, dh) {
       if (img === town.buf && town.args && arguments.length === 5 && !town.inHi && dw > 0 && dh > 0) {
+        window.townScreen = { left: dx, top: dy, width: dw, height: dh };
         try {
           var scale = Math.max(1, Math.min(4, Math.abs(this.getTransform().a)));
           var pw = Math.round(dw * scale), ph = Math.round(dh * scale);
@@ -1339,6 +1555,7 @@
         hookTownScreen();
       } catch (e) {}
     }
+    ctx.save();
     window.__townPlaces = places;
     window.__townSegs = streetSegs(places);
     var sx = shop && shop.x != null ? shop.x : 528;
@@ -1353,6 +1570,7 @@
       reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     } catch (e) {}
     var now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    var motionTime = reduced ? 0 : now;
     var hour = hourOfDay();
     var night = hour < 5.5 || hour > 20.5;
     var dusk = (hour >= 5.5 && hour < 8) || (hour >= 17.5 && hour <= 20.5);
@@ -1413,7 +1631,7 @@
       window.__gunFlash *= Math.pow(0.84, frameStep("flash", now / 1000));
     }
     if (window.__gunSiren) {
-      var pulse = 0.5 + 0.5 * Math.sin(now / 180);
+      var pulse = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(now / 180);
       ctx.fillStyle = "rgba(180,20,30," + (0.07 * pulse).toFixed(3) + ")";
       ctx.fillRect(0, 0, w * 0.5, h);
       ctx.fillStyle = "rgba(20,40,180," + (0.07 * (1 - pulse)).toFixed(3) + ")";
@@ -1428,18 +1646,25 @@
     }
 
     var byId = Object.create(null);
+    var homePlaces = [];
+    var mapLabels = [];
+    var mapHits = [];
+    var selectedView = null;
     if (places && places.length) {
       for (var p0 = 0; p0 < places.length; p0++) {
         var pl0 = places[p0];
-        if (pl0 && pl0.id) byId[pl0.id] = pl0;
+        if (pl0 && pl0.id) {
+          byId[pl0.id] = pl0;
+          if (pl0.q === "ne") homePlaces.push(pl0);
+        }
       }
     }
     var segs = window.__townSegs || [];
 
     if (segs.length) {
       ctx.save();
-      ctx.strokeStyle = night ? "rgba(255,214,140,.16)" : "rgba(255,228,180,.2)";
-      ctx.lineWidth = Math.max(2.2, w * 0.007);
+      ctx.strokeStyle = "rgba(7,21,29,.45)";
+      ctx.lineWidth = Math.max(4, w * 0.012);
       ctx.lineCap = "round";
       ctx.beginPath();
       for (var sg = 0; sg < segs.length; sg++) {
@@ -1449,12 +1674,13 @@
         ctx.lineTo(b[0], b[1]);
       }
       ctx.stroke();
+      ctx.strokeStyle = night ? "rgba(242,207,141,.23)" : "rgba(224,225,204,.48)";
+      ctx.lineWidth = Math.max(2, w * 0.0055);
+      ctx.stroke();
       ctx.restore();
     }
 
     if (places && places.length) {
-      ctx.font = "600 " + Math.max(9, Math.round(w * 0.018)) + "px Nunito, sans-serif";
-      ctx.textAlign = "center";
       for (var p = 0; p < places.length; p++) {
         var pl = places[p];
         if (!pl || pl.id === "sea") continue;
@@ -1462,32 +1688,19 @@
         if (q && q !== "ne" && q !== "dt" && pl.id !== "shop") continue;
         var xy = toV(pl.x, pl.y);
         if (xy[0] < 8 || xy[0] > w - 8 || xy[1] < 8 || xy[1] > h - 8) continue;
-        if (pl.id === "shop") {
-          ctx.save();
-          ctx.fillStyle = "rgba(244,196,83,.22)";
-          ctx.beginPath();
-          ctx.arc(xy[0], xy[1], Math.max(9, w * 0.022), 0, 7);
-          ctx.fill();
-          ctx.strokeStyle = "rgba(244,196,83,.9)";
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          ctx.fillStyle = "#f4c453";
-          ctx.beginPath();
-          ctx.moveTo(xy[0], xy[1] - w * 0.028);
-          ctx.lineTo(xy[0] - 4, xy[1] - 4);
-          ctx.lineTo(xy[0] + 4, xy[1] - 4);
-          ctx.closePath();
-          ctx.fill();
-          ctx.fillStyle = "#f4c453";
-          ctx.fillText("Fin's", xy[0], xy[1] - w * 0.034);
-          ctx.restore();
-        } else if (w > 220) {
-          ctx.fillStyle = "rgba(8,12,18,.55)";
-          var tw = ctx.measureText(pl.n).width + 10;
-          ctx.fillRect(xy[0] - tw / 2, xy[1] - 15, tw, 12);
-          ctx.fillStyle = "rgba(230,236,242,.86)";
-          ctx.fillText(pl.n, xy[0], xy[1] - 5);
+        var isPark = pl.id === "prado" || pl.id === "langone" || pl.id === "park" || pl.id === "greenway";
+        var landmark = pl.id === "shop" || pl.id === "oldnorth" || pl.id === "haymarket" || isPark;
+        var symbolSize = Math.max(18, Math.min(36, w * 0.045));
+        if ((night || dusk) && landmark) {
+          var glowSize = symbolSize * (pl.id === "shop" ? 3.6 : 2.3);
+          ctx.drawImage(townLampImage(), xy[0] - glowSize / 2, xy[1] - glowSize / 2, glowSize, glowSize);
         }
+        if (landmark && w > 220) townLandmark(ctx, xy[0], xy[1], symbolSize, pl.id, night || dusk);
+        ctx.fillStyle = pl.id === "shop" ? "#f4c453" : "#bdd1cc";
+        ctx.beginPath(); ctx.arc(xy[0], xy[1] + 2, pl.id === "shop" ? 3 : 1.8, 0, 7); ctx.fill();
+        var priority = pl.id === "shop" ? 0 : pl.id === "oldnorth" ? 1 : pl.id === "haymarket" ? 2 : isPark ? 3 : 4;
+        mapLabels.push({ x: xy[0], y: xy[1], text: pl.id === "shop" ? "Fin's" : pl.n, priority: priority,
+          lift: landmark && w > 220 ? symbolSize * (pl.id === "oldnorth" ? 1.35 : 0.85) : 2 });
       }
     }
 
@@ -1517,12 +1730,7 @@
         var homePl = null;
         if (job && job.homes && places) {
           var seedH = (H.who && H.who[i]) >>> 0;
-          var cand = [];
-          for (var hp = 0; hp < places.length; hp++) {
-            var plc = places[hp];
-            if (plc && plc.q === "ne") cand.push(plc);
-          }
-          if (cand.length) homePl = cand[seedH % cand.length];
+          if (homePlaces.length) homePl = homePlaces[seedH % homePlaces.length];
         }
         if (!run) {
           if (st === 6) {
@@ -1580,7 +1788,7 @@
             if (walkCap > walkMax) continue;
             if (segs.length) {
               var walkSeg = segs[(i * 3) % segs.length];
-              var wt = ((now / 14000 + hash01(i, 9)) % 1);
+              var wt = ((motionTime / 14000 + hash01(i, 9)) % 1);
               if (H.vx && H.vx[i] < 0) wt = 1 - wt;
               var onW = alongSeg(walkSeg, 0.08 + wt * 0.84, (i % 2 ? 1 : -1) * 1.7);
               px = onW[0];
@@ -1603,7 +1811,7 @@
         var coming = st === 5 || st === 6;
         var near = distShop < 16 || st === 6;
         var size = coming || run ? Math.max(14, w * 0.03) : near ? Math.max(11, w * 0.024) : Math.max(8, w * 0.016);
-        var moving = st === 1 || st === 3 || st === 5 || run;
+        var moving = !reduced && (st === 1 || st === 3 || st === 5 || run);
         var face = H.vx && H.vx[i] < 0 ? -1 : 1;
         var walk = (i * 0.17 + (H.t || 0) * (moving ? (run ? 3.4 : 1.6) : 0)) % 2;
         var jid = job && job.id ? job.id : "";
@@ -1636,11 +1844,13 @@
             );
           } catch (e) {
             folk = false;
-            drawMiniPerson(ctx, v[0], v[1], size, col, moving, walk);
+            drawMiniPerson(ctx, v[0], v[1], size, col, moving, walk, (H.who && H.who[i]) >>> 0);
           }
         } else {
-          drawMiniPerson(ctx, v[0], v[1], size, col, moving, walk);
+          drawMiniPerson(ctx, v[0], v[1], size, col, moving, walk, (H.who && H.who[i]) >>> 0);
         }
+        mapHits.push({ i: i, x: v[0], y: v[1], size: size });
+        if (i === selected) selectedView = { x: v[0], y: v[1], size: size };
         if (run && drawn < 40) {
           ctx.fillStyle = "rgba(255,244,210,.85)";
           ctx.font = "700 " + Math.max(8, Math.round(w * 0.016)) + "px Nunito, sans-serif";
@@ -1652,8 +1862,8 @@
 
     if (window.__gunSiren) {
       var segs2 = window.__townSegs || [];
-      var pulse2 = (now / 180) % 1;
-      var drive = ((now / 5500) % 1);
+      var pulse2 = (motionTime / 180) % 1;
+      var drive = ((motionTime / 5500) % 1);
       var cruiserXY = [sx - 18, sy + 6];
       if (segs2.length) {
         var sg2 = segs2[0];
@@ -1664,36 +1874,34 @@
       drawCruiser(ctx, cv[0], cv[1], ang, pulse2);
     }
 
-    if (selected >= 0 && H && selected < H.n) {
-      var sv = toV(H.x[selected], H.y[selected]);
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2;
+    if (selectedView) {
+      ctx.strokeStyle = "#f7ead1";
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
-      ctx.arc(sv[0], sv[1], 11, 0, 7);
+      ctx.ellipse(selectedView.x, selectedView.y - selectedView.size * 0.4,
+        Math.max(6, selectedView.size * 0.55), Math.max(8, selectedView.size * 0.8), 0, 0, 7);
       ctx.stroke();
     }
+    townPanelPick(ctx.canvas, H, mapHits);
 
-    if (!reduced && segs.length && !night) {
-      ctx.fillStyle = "rgba(40,48,56,.85)";
-      for (var car = 0; car < 5; car++) {
+    if (segs.length) {
+      for (var car = 0; car < (night ? 2 : 5); car++) {
         var cs = segs[(car * 2) % segs.length];
-        var ct = (now / (9000 + car * 1100) + hash01(car, 4)) % 1;
+        var ct = (motionTime / (9000 + car * 1100) + hash01(car, 4)) % 1;
         var cxy = alongSeg(cs, 0.1 + ct * 0.8, 0);
         var cvp = toV(cxy[0], cxy[1]);
-        ctx.save();
-        ctx.translate(cvp[0], cvp[1]);
         var cang = Math.atan2(cs[3] - cs[1], cs[2] - cs[0]);
-        ctx.rotate(cang);
-        ctx.fillRect(-5, -2.2, 10, 4.4);
-        ctx.fillStyle = "#d8c48a";
-        ctx.fillRect(2.2, -1.4, 2.2, 1.1);
-        ctx.fillStyle = "rgba(40,48,56,.85)";
-        ctx.restore();
+        townTraffic(ctx, cvp[0], cvp[1], cang, Math.max(10, Math.min(18, w * 0.024)),
+          ["#6b8286", "#ad6b56", "#c9b18a", "#526877", "#b8c4bd"][car], night || dusk);
       }
     }
 
-    ctx.fillStyle = "rgba(8,14,22,.66)";
+    // Keep the names above people and traffic, with collision-aware placement at small widths.
+    townLabels(ctx, mapLabels, w, h);
+    ctx.fillStyle = "rgba(8,14,22,.84)";
     ctx.fillRect(0, h - 28, w, 28);
+    ctx.fillStyle = "rgba(150,187,182,.4)";
+    ctx.fillRect(0, h - 29, w, 1);
     ctx.fillStyle = fleeingWorld || window.__gunSiren ? "#f4c453" : "rgba(230,236,242,.82)";
     ctx.font = "600 " + Math.max(10, Math.round(w * 0.02)) + "px Nunito, sans-serif";
     ctx.textAlign = "left";
@@ -1710,5 +1918,6 @@
       h - 10
     );
     if (shaken) ctx.restore();
+    ctx.restore();
   };
 })();

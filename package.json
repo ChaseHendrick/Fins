@@ -10,8 +10,11 @@
   "scripts": {
     "start": "electron .",
     "build": "node tools/build.mjs",
-    "check": "npm run check:syntax && npm run check:build && npm run check:wiring && npm run check:lint && npm run check:boot",
+    "check": "npm run check:syntax && npm run check:water && npm run check:folk && npm run check:build && npm run check:wiring && npm run check:lint && npm run check:boot",
     "check:syntax": "node tools/check-syntax.mjs",
+    "check:water": "node tools/water-check.mjs",
+    "check:folk": "node tools/folk-check.mjs",
+    "check:polish": "node tools/polish-check.mjs",
     "check:build": "node tools/build.mjs --check",
     "check:wiring": "node tools/check-wiring.mjs",
     "check:lint": "eslint .",

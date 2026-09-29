@@ -150,7 +150,14 @@
 
   function toView(x, y, w, h) {
     try {
-      if (typeof window.townToView === "function") return window.townToView(x, y, w, h);
+      if (typeof window.townToView === "function") {
+        var screen = window.townScreen;
+        if (screen && screen.width > 0 && screen.height > 0) {
+          var xy = window.townToView(x, y, screen.width, screen.height);
+          return [screen.left + xy[0], screen.top + xy[1]];
+        }
+        return window.townToView(x, y, w, h);
+      }
     } catch (e) {}
     var cam = window.townCam || { left: 482, top: 472, span: 96 };
     return [((x - cam.left) / cam.span) * w, ((y - cam.top) / cam.span) * h];
@@ -207,12 +214,14 @@
   }
 
   function windowRect(home, index, w, h) {
-    var s = shopXY();
+    var place = placeById(placeOf(home));
+    var s = place && isFinite(place.x) ? [place.x, place.y] : shopXY();
     var v = toView(s[0], s[1], w, h);
-    var ang = -2.35 + index * 0.62;
-    var rad = Math.max(78, w * 0.085);
-    var bw = Math.max(30, w * 0.028);
-    var bh = Math.max(38, w * 0.036);
+    var mapWidth = window.townScreen ? window.townScreen.width : w;
+    var ang = -2.35 + (index % 8) * 0.78;
+    var rad = Math.max(18, mapWidth * 0.035) + Math.floor(index / 8) * 8;
+    var bw = Math.max(16, Math.min(25, mapWidth * 0.034));
+    var bh = bw * 1.16;
     var wx = v[0] + Math.cos(ang) * rad;
     var wy = v[1] + Math.sin(ang) * rad * 0.72;
     return {
@@ -228,9 +237,11 @@
   function shopWindowRect(w, h) {
     var s = shopXY();
     var v = toView(s[0], s[1], w, h);
-    var bw = Math.max(34, w * 0.032);
-    var bh = Math.max(42, w * 0.04);
-    return { x: v[0] + 16, y: v[1] - bh - 10, w: bw, h: bh, shop: true };
+    var mapWidth = window.townScreen ? window.townScreen.width : w;
+    var symbolSize = Math.max(18, Math.min(36, mapWidth * 0.045));
+    // The pane fits the drawn storefront's window instead of floating elsewhere on the screen.
+    return { x: v[0] - symbolSize * 10 / 32, y: v[1] - symbolSize * 13 / 32,
+      w: symbolSize * 12 / 32, h: symbolSize * 10 / 32, shop: true };
   }
 
   function drawTinyFish(ctx, rx, t, col, dead) {
@@ -255,8 +266,8 @@
     var dead = !!(home && home.dead);
     var live = home && !dead;
     ctx.save();
-    ctx.fillStyle = "rgba(18,12,8,.72)";
-    ctx.fillRect(rx.x - 2, rx.y - 3, rx.w + 4, rx.h + 6);
+    ctx.fillStyle = "rgba(20,28,30,.86)";
+    ctx.beginPath(); ctx.roundRect(rx.x - 2, rx.y - 2, rx.w + 4, rx.h + 4, rx.shop ? 1 : 4); ctx.fill();
     if (dead) {
       ctx.fillStyle = "rgba(6,8,12,.92)";
       ctx.fillRect(rx.x, rx.y, rx.w, rx.h);
@@ -285,20 +296,20 @@
     }
     ctx.strokeStyle = hi ? "rgba(244,196,83,.95)" : "rgba(244,214,160,.55)";
     ctx.lineWidth = hi ? 2.5 : 1.4;
-    ctx.strokeRect(rx.x, rx.y, rx.w, rx.h);
+    ctx.beginPath(); ctx.roundRect(rx.x, rx.y, rx.w, rx.h, rx.shop ? 1 : 3); ctx.stroke();
     if (home && home.named && !dead) {
       ctx.strokeStyle = "rgba(244,196,83,.85)";
       ctx.lineWidth = 2;
       ctx.strokeRect(rx.x - 1.5, rx.y - 1.5, rx.w + 3, rx.h + 3);
     }
     var cap = "";
-    if (rx.shop) cap = "Fin's";
+    if (rx.shop) cap = "";
     else if (home && home.dead) cap = "dark";
     else if (home && home.neighbor) cap = (home.who || "Mae").split(" ")[0];
     else if (home && home.nick) cap = home.nick;
     else if (home) cap = home.sp || "window";
     if (cap) {
-      ctx.font = "700 " + Math.max(10, (rx.w * 0.36) | 0) + "px Nunito, sans-serif";
+      ctx.font = "600 " + Math.max(9, Math.min(11, (rx.w * 0.4) | 0)) + "px Nunito, system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.fillStyle = "rgba(8,12,18,.78)";
       var cw = ctx.measureText(cap).width + 8;
@@ -328,14 +339,15 @@
     var sc = sceneName();
     if (sc !== "street") {
       hits = [];
-      if (octx && overlay) octx.clearRect(0, 0, overlay.width, overlay.height);
+      if (overlay && overlay.width) { overlay.width = overlay.height = 0; }
       return;
     }
     resize();
     var w = window.innerWidth;
     var h = window.innerHeight;
     octx.clearRect(0, 0, w, h);
-    var t = now();
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var t = reduced ? 0 : now();
     var nite = night();
     var hs = homes();
     hits = [];
@@ -348,6 +360,9 @@
       var home = hs[i];
       if (!home) continue;
       var rx = windowRect(home, i, w, h);
+      var screen = window.townScreen;
+      if (screen && (rx.x < screen.left + 3 || rx.y < screen.top + 4 ||
+        rx.x + rx.w > screen.left + screen.width - 3 || rx.y + rx.h + 16 > screen.top + screen.height - 30)) continue;
       hits.push(rx);
       drawOne(octx, rx, t, nite, hover === hits.length - 1);
     }

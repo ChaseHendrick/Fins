@@ -16,6 +16,24 @@
     "kid",
   ];
 
+  /* These are painted sheets, not an aspect-ratio convention. A guessed grid
+     used to turn one customer into four tiny people in the same frame. */
+  var GRIDS = {
+    fin: { cols: 2, rows: 2 },
+    staff: { cols: 2, rows: 2 },
+    woman_coat: { cols: 8, rows: 1 },
+    woman_casual: { cols: 4, rows: 2 },
+    woman_dress: { cols: 4, rows: 2 },
+    man_coat: { cols: 16, rows: 2 },
+    man_casual: { cols: 16, rows: 2 },
+    man_suit: { cols: 4, rows: 2 },
+    man_work: { cols: 4, rows: 2 },
+    elder: { cols: 4, rows: 2 },
+    kid: { cols: 4, rows: 2 },
+  };
+  var motionQuery = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+  var shadowSprite = null;
+
   var sheets = Object.create(null);
   var ready = 0;
   var tintCache = new Map();
@@ -28,7 +46,7 @@
       var img = new Image();
       img.onload = function () {
         try {
-          sheets[key] = sliceSheet(img);
+          sheets[key] = sliceSheet(img, key);
           ready++;
         } catch (err) {
           console.warn("folk: slice failed", key, err);
@@ -37,7 +55,7 @@
       img.onerror = function () {
         console.warn("folk: missing sheet", key);
       };
-      img.src = "folk/" + key + ".png?v=22";
+      img.src = "folk/" + key + ".png?v=23";
     });
   }
 
@@ -51,8 +69,8 @@
     return { cols: 1, rows: 1 };
   }
 
-  function sliceSheet(img) {
-    var g = inferGrid(img);
+  function sliceSheet(img, key) {
+    var g = GRIDS[key] || inferGrid(img);
     var cols = g.cols,
       rows = g.rows;
     var fw = img.width / cols,
@@ -146,18 +164,16 @@
   function frameBlend(walk, n, moving, look) {
     n = Math.max(1, n || 1);
     if (n === 1) return { i0: 0, i1: 0, t: 0 };
-    var tnow = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (motionQuery && motionQuery.matches) return { i0: 0, i1: 0, t: 0 };
     if (!moving) {
       if (n >= 6) return { i0: 0, i1: 0, t: 0 };
       if (look && look.greet && n > 3) return { i0: n - 1, i1: n - 1, t: 0 };
       if (look && look.work && n > 2) return { i0: Math.min(2, n - 1), i1: Math.min(2, n - 1), t: 0 };
-      var seed = (look && look.seed) || 0;
-      var f = ((tnow / 1000) * 0.7 + seed * 0.37) % n;
-      var i0 = f | 0;
-      if (i0 >= n) i0 = 0;
-      var i1 = (i0 + 1) % n;
-      return { i0: i0, i1: i1, t: ease(f - i0) };
+      return { i0: 0, i1: 0, t: 0 };
     }
+    /* The keeper's four frames are standing, hand on hip, work and greeting.
+       They are poses, so walking must not cycle through work and greeting. */
+    if (n === 4) return { i0: 0, i1: 0, t: 0 };
     var p = (((Number(walk) || 0) % 2) + 2) % 2 / 2;
     var f = p * n;
     var i0 = f | 0;
@@ -303,7 +319,9 @@
     var scale = destH / unionBox.h;
     var w = frameBox.w * scale;
     var h = frameBox.h * scale;
-    ctx.drawImage(src, frameBox.x, frameBox.y, frameBox.w, frameBox.h, -w / 2, -h, w, h);
+    var dx = (frameBox.x - unionBox.x - unionBox.w / 2) * scale;
+    var dy = (frameBox.y - unionBox.y - unionBox.h) * scale;
+    ctx.drawImage(src, frameBox.x, frameBox.y, frameBox.w, frameBox.h, dx, dy, w, h);
   }
 
   function contactShadow(ctx, x, y, destW, size, moving, walk) {
@@ -311,24 +329,28 @@
     plant = Math.max(0.4, Math.min(1, plant));
     var rx = Math.max(8, destW * (0.24 + plant * 0.1));
     var ry = Math.max(2.6, size * (0.04 + plant * 0.02));
+    if (!shadowSprite) {
+      shadowSprite = document.createElement("canvas");
+      shadowSprite.width = shadowSprite.height = 64;
+      var sg = shadowSprite.getContext("2d");
+      var gradient = sg.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gradient.addColorStop(0, "rgba(8,4,0,0.56)");
+      gradient.addColorStop(0.38, "rgba(8,4,0,0.24)");
+      gradient.addColorStop(1, "rgba(8,4,0,0)");
+      sg.fillStyle = gradient;
+      sg.fillRect(0, 0, 64, 64);
+    }
     ctx.save();
-    ctx.translate(x + size * 0.018, y + 1.5);
-    ctx.scale(1, ry / rx);
-    var g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
-    g.addColorStop(0, "rgba(8,4,0," + (0.38 + plant * 0.18).toFixed(3) + ")");
-    g.addColorStop(0.38, "rgba(8,4,0," + (0.16 + plant * 0.08).toFixed(3) + ")");
-    g.addColorStop(1, "rgba(8,4,0,0)");
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(0, 0, rx, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.globalAlpha *= (0.38 + plant * 0.18) / 0.56;
+    ctx.drawImage(shadowSprite, x + size * 0.018 - rx, y + 1.5 - ry, rx * 2, ry * 2);
     ctx.restore();
   }
 
   window.folkDraw = function (ctx, x, y, size, colorHex, walk, showFace, face, moving, look) {
     if (!ctx || !size || size < 4) return false;
     var key = pickKey(colorHex, look);
-    var sheet = sheets[key] || sheets.man_casual || sheets.fin;
+    if (!sheets[key]) key = sheets.man_casual ? "man_casual" : "fin";
+    var sheet = sheets[key];
     if (!sheet) return false;
     var n = sheet.n || sheet.frames.length;
     var fb = frameBlend(walk, n, moving, look);
@@ -341,34 +363,34 @@
     var destH = size * (key === "kid" ? 0.72 : 1.02);
     var destW = destH * (union.w / union.h);
     var behind = !!(look && look.behind);
+    // The painted room has an open floor at the old counter position.
+    // Its engine flag must not crop a standing keeper in half there.
+    if (window.__scene === "shop" && window.shopBg && window.shopBg.complete &&
+      window.shopBg.naturalWidth && (key === "fin" || key === "staff")) behind = false;
+    var quiet = !!(motionQuery && motionQuery.matches);
     var id = look && look.id != null ? String(look.id) : "";
     if (id) {
+      var now = typeof performance !== "undefined" ? performance.now() : Date.now();
       var lp = lastPos[id];
-      if (lp) {
-        x = lp.x + (x - lp.x) * 0.42;
-        y = lp.y + (y - lp.y) * 0.42;
+      if (lp && lp.ctx === ctx && !quiet && Math.hypot(x - lp.x, y - lp.y) < size * 2) {
+        var follow = 1 - Math.exp(-Math.min(0.1, Math.max(0, (now - lp.t) / 1000)) * 32.7);
+        x = lp.x + (x - lp.x) * follow;
+        y = lp.y + (y - lp.y) * follow;
       }
-      lastPos[id] = { x: x, y: y };
+      lastPos[id] = { x: x, y: y, t: now, ctx: ctx };
       var keys = Object.keys(lastPos);
       if (keys.length > 80) delete lastPos[keys[0]];
     }
-    var union = sheet.box;
-    var box0 = (sheet.boxes && sheet.boxes[fb.i0]) || union;
-    var box1 = (sheet.boxes && sheet.boxes[fb.i1]) || union;
-    if (!union || union.h < 4) return false;
-    var destH = size * (key === "kid" ? 0.72 : 1.02);
-    var destW = destH * (union.w / union.h);
-    var behind = !!(look && look.behind);
     ctx.save();
     if (!behind) contactShadow(ctx, x, y, destW, size, moving, walk);
     ctx.translate(x, y);
     if ((face || 1) < 0) ctx.scale(-1, 1);
-    if (!moving) {
+    if (!moving && !quiet) {
       var t = (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000;
       var seed = (look && look.seed) || 0;
       ctx.translate(Math.sin(t * 0.7 + seed) * destW * 0.01, Math.sin(t * 1.15 + seed) * destH * 0.008);
       ctx.scale(1 + Math.sin(t * 1.4 + seed) * 0.01, 1 + Math.sin(t * 1.4 + seed) * 0.018);
-    } else {
+    } else if (!quiet) {
       var phase = (((Number(walk) || 0) % 1) + 1) % 1;
       var bob = Math.abs(Math.sin(phase * Math.PI * 2)) * destH * 0.028;
       var contact = Math.pow(Math.abs(Math.cos(phase * Math.PI * 2)), 4);

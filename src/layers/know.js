@@ -35,6 +35,13 @@
       w: "<p>A clogged filter is the shop turning people around at the door. Sick fish make the ones who stay talk. Ich is an outbreak, not a mood. The nitrogen cycle does not care that you were in the Atlas.</p><p>{filter}</p><p><b>What to do about it:</b> click the clog pill on the HUD. Feed less if ammonia is up. Heat if the room is following a cold street. The Calendar tells you the season; winter will punish an unheated tank.</p>",
     },
     {
+      id: "k_current",
+      sec: "The animals",
+      t: "Water in motion",
+      tags: "water physics current motion wake feeding filter fins flow ripples",
+      w: "<p>The filter moves the water. Small suspended flecks follow the same current the fish swim through. Swimming fish leave brief wakes; feeding disturbs nearby water, and pellets drift with it.</p><p>The tank surface settles after a disturbance. Shop tanks have their own small surface waves. A change of tank clears the previous tank's wakes.</p><p><b>What to do about it:</b> feed once and watch the drift. Clear a clogged filter before feeding again. A calm surface is not a water-quality reading; the filter and chemistry still need care.</p>",
+    },
+    {
       id: "k_broke",
       sec: "When you are stuck",
       t: "The till is thin",
@@ -115,7 +122,7 @@
       id: "k_map",
       sec: "The quarter",
       t: "The street outside",
-      tags: "map salem north end jobs crowd walkins bored baker window",
+      tags: "map salem north end jobs crowd walkins bored baker window routes landmarks night lights",
       w: "<p>The Map is the North End, not a circle of ants. People have homes, trades, faiths, and a reason to be on a block. Some of them walk to your door. Some go to Haymarket. Some are at sea.</p><p>{baker} {windows}</p><p><b>What to do about it:</b> open Map when the shop is quiet. Click a window. Life lists who has been in. A campaign is a bigger circle, not just a multiplier.</p>",
     },
     {
