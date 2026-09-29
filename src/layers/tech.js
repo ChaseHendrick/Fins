@@ -1,10 +1,6 @@
-/* tech.js — cutting-edge presentation & simulation layered on Fin's.
-   Applied where they actually show: Gerstner water, domain-warped caustics,
-   Beer-Lambert depth, Schlick glass, Snell's window, Worley biofilm,
-   PBD kelp (Catmull-Rom), Yuksel wave particles, SPH-lite bubbles,
-   Gray-Scott markings, FABRIK tails, Kajiya-Kay scales, ORCA crowds,
-   IGN grain, FDN reverb, stereo pan, aerial map fog.
-   Simulation outcomes stay with fins.js. Every hook is try-guarded. */
+/* Rendering effects for Fin's. Water motion is shared with water.js.
+   People follow the engine's positions; drawing must not push a person away
+   from their own previous frame. Every hook is guarded. */
 (function () {
   "use strict";
 
@@ -27,6 +23,7 @@
   var lastFloorY = 0;
   var lastWx = {};
   var fishDrawn = 0;
+  var folkDrawn = 0;
 
   function clamp(x, a, b) {
     return x < a ? a : x > b ? b : x === x ? x : a;
@@ -59,6 +56,7 @@
     try {
       if (document.body.classList.contains("titling")) return "title";
       if (document.body.classList.contains("work")) return "work";
+      if (window.__scene) return String(window.__scene);
       if (window.G && window.G.scene) return String(window.G.scene);
       if (typeof rr === "function") return String(rr() || "tank");
     } catch (e) {}
@@ -156,14 +154,6 @@
       }
     }
     return Math.sqrt(d);
-  }
-
-  function gerstnerY(x, t, seed) {
-    var y = 0;
-    y += 2.4 * Math.sin(x * 0.045 + t * 1.15 + seed);
-    y += 1.4 * Math.sin(x * 0.09 + t * 1.7 + seed * 1.7);
-    y += 0.7 * Math.sin(x * 0.18 + t * 2.4 + seed * 0.4);
-    return y;
   }
 
   var waves = [];
@@ -581,10 +571,6 @@
     return t.p;
   }
 
-  var folkPrev = [];
-  var folkCur = [];
-  var folkOff = Object.create(null);
-  var lastFolkT = 0;
 
   var overlay = null, octx = null, grain = null, grainT = 0;
   var bloomA = null, bloomB = null, bloomTick = 0;
@@ -707,9 +693,9 @@
     if (!bloomReady || !octx) return;
     octx.save();
     octx.globalCompositeOperation = "lighter";
-    octx.globalAlpha = 0.32;
+    octx.globalAlpha = 0.1;
     octx.drawImage(bloomB, 0, 0, w, h);
-    octx.globalAlpha = 0.12;
+    octx.globalAlpha = 0.035;
     octx.filter = "blur(18px)";
     octx.drawImage(bloomB, -w * 0.04, 0, w * 1.08, h);
     octx.filter = "none";
@@ -726,7 +712,7 @@
     grainT += 1;
     octx.save();
     octx.globalCompositeOperation = "overlay";
-    octx.globalAlpha = quiet ? 0.025 : 0.045;
+    octx.globalAlpha = quiet ? 0.018 : 0.025;
     var ox = (grainT * 1.7) % 96, oy = (grainT * 1.1) % 96;
     var pat = octx.createPattern(grain, "repeat");
     octx.translate(-ox, -oy);
@@ -742,34 +728,10 @@
     octx.fillRect(0, 0, w, h);
     octx.restore();
 
-    var sc = sceneName();
-    if (sc === "tank" && !quiet) {
-      var t = now / 1000;
-      fillCaustics(octx, 0, h * 0.08, w, h * 0.92, t, 0.09);
-      octx.save();
-      octx.globalCompositeOperation = "lighter";
-      octx.strokeStyle = "rgba(200,235,255,.22)";
-      octx.lineWidth = 2.2;
-      octx.beginPath();
-      var top = h * 0.09;
-      octx.moveTo(0, top);
-      for (var x = 0; x <= w; x += 8) {
-        octx.lineTo(x, top + gerstnerY(x, t, 0.2));
-      }
-      octx.stroke();
-      var ray = octx.createLinearGradient(w * 0.5, 0, w * 0.55, h * 0.7);
-      ray.addColorStop(0, "rgba(180,220,255,.08)");
-      ray.addColorStop(1, "rgba(180,220,255,0)");
-      octx.fillStyle = ray;
-      octx.beginPath();
-      octx.moveTo(w * 0.36, 0);
-      octx.lineTo(w * 0.64, 0);
-      octx.lineTo(w * 0.74, h);
-      octx.lineTo(w * 0.26, h);
-      octx.fill();
-      octx.restore();
-      drawWaves(octx, null);
-    }
+    // The engine paints its own caustics and spring waterline at waterTop.
+    // A second tiled pass and a line at 9% of the screen washed out the water
+    // and drew a second surface above the tank. Particulate follows that field.
+    if (sceneName() === "tank" && !quiet && window.finsWater) window.finsWater.paint(octx);
   }
 
   var drone = null;
@@ -873,41 +835,6 @@
     }
   }
 
-  function nudgeFish(dt, t) {
-    var L = window.G;
-    if (!L || !Array.isArray(L.fish)) return;
-    if (L.gunScare && (L.t || 0) < L.gunScare) return;
-    if (sceneName() !== "tank") return;
-    var n = L.fish.length;
-    T.fish = n;
-    var k = 12 * dt;
-    for (var i = 0; i < n; i++) {
-      var f = L.fish[i];
-      if (!f || f.dead) continue;
-      curl(f.x || 0, f.y || 0, t);
-      if (typeof f.vx === "number") f.vx += _cx * k;
-      if (typeof f.vy === "number") f.vy += _cy * k * 0.55;
-      for (var j = i + 1; j < n && j < i + 6; j++) {
-        var o = L.fish[j];
-        if (!o || o.dead) continue;
-        var dx = (f.x || 0) - (o.x || 0);
-        var dy = (f.y || 0) - (o.y || 0);
-        var d2 = dx * dx + dy * dy;
-        if (d2 > 4 && d2 < 900) {
-          var push = 8 * dt / d2;
-          if (typeof f.vx === "number") {
-            f.vx += dx * push;
-            o.vx -= dx * push;
-          }
-          if (typeof f.vy === "number") {
-            f.vy += dy * push * 0.6;
-            o.vy -= dy * push * 0.6;
-          }
-        }
-      }
-    }
-  }
-
   function clipTank(ctx, tk, i) {
     var pts = window.__shopTankPts;
     var q = pts && pts[i] && pts[i].q;
@@ -951,14 +878,7 @@
         fillCaustics(ctx, tx, ty + th * 0.18, tw, th * 0.64, t + i, wx.clog ? 0.1 : (live ? 0.16 : 0.24));
 
         var sy = ty + th * 0.105;
-        ctx.strokeStyle = "rgba(210,240,255,.42)";
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.moveTo(tx, sy);
-        for (var px = 0; px <= tw; px += 4) {
-          ctx.lineTo(tx + px, sy + gerstnerY(px, t, i * 0.7));
-        }
-        ctx.stroke();
+        if (window.finsWater) window.finsWater.paintSurface(ctx, tk, t, i);
 
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
@@ -993,7 +913,7 @@
 
         glassOnTank(ctx, tk, t, i);
 
-        if (floorY) {
+        if (floorY && !live) {
           ctx.save();
           ctx.globalCompositeOperation = "lighter";
           var cx = tx + tw * 0.5 + Math.sin(t * 0.8 + i) * 6;
@@ -1080,20 +1000,22 @@
     ctx.restore();
   }
 
-  var fishPrev = Object.create(null);
+  var fishPrev = new WeakMap();
   wrap("drawFishSprite", function (orig, self, args) {
     var a = args[0] || {};
     if (a.x != null && a.y != null && a.fish) {
-      var id = fishId(a.fish) || a.x;
-      var pr = fishPrev[id];
-      if (pr) {
-        a.x = pr.x + (a.x - pr.x) * 0.38;
-        a.y = pr.y + (a.y - pr.y) * 0.38;
+      var pr = fishPrev.get(a.fish);
+      if (pr && Math.hypot(a.x - pr.x, a.y - pr.y) < 160) {
+        var blend = 1 - Math.exp(-29 * frameDt);
+        a.x = pr.x + (a.x - pr.x) * blend;
+        a.y = pr.y + (a.y - pr.y) * blend;
         args[0] = a;
       }
-      fishPrev[id] = { x: a.x, y: a.y };
+      if (!pr) pr = {};
+      pr.x = a.x; pr.y = a.y;
+      fishPrev.set(a.fish, pr);
     }
-    var a = args[0] || {};
+    a = args[0] || {};
     var r = orig.apply(self, args);
     if (!r || !a.ctx || reduced) return r;
     try {
@@ -1162,36 +1084,7 @@
   });
 
   wrap("folkDraw", function (orig, self, args) {
-    var ctx = args[0], x = args[1], y = args[2], size = args[3], look = args[9];
-    var now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    if (now - lastFolkT > 32) {
-      folkPrev = folkCur;
-      folkCur = [];
-      lastFolkT = now;
-    }
-    var ox = 0, oy = 0;
-    var rad = Math.max(10, (size || 20) * 0.38);
-    var src = folkPrev.length ? folkPrev : folkCur;
-    for (var i = 0; i < src.length; i++) {
-      var o = src[i];
-      var dx = x - o.x, dy = y - o.y;
-      var d2 = dx * dx + dy * dy;
-      var min = rad + o.r;
-      if (d2 > 0.01 && d2 < min * min) {
-        var d = Math.sqrt(d2);
-        var push = (min - d) * 0.5;
-        ox += (dx / d) * push;
-        oy += (dy / d) * push * 0.32;
-      }
-    }
-    var id = look && look.id != null ? look.id : (x | 0) + ":" + (y | 0);
-    var sm = folkOff[id] || (folkOff[id] = { x: 0, y: 0 });
-    sm.x = sm.x * 0.7 + ox * 0.3;
-    sm.y = sm.y * 0.7 + oy * 0.3;
-    args[1] = x + sm.x;
-    args[2] = y + sm.y;
-    folkCur.push({ x: args[1], y: args[2], r: rad, id: id });
-    T.folk = folkCur.length;
+    folkDrawn++;
     return orig.apply(self, args);
   });
 
@@ -1250,7 +1143,6 @@
     frameDt = dt;
     acc += dt;
     if (acc > 0.2) acc = 0.2;
-    var t = now / 1000;
     while (acc >= STEP) {
       simT += STEP;
       for (var i = vortices.length - 1; i >= 0; i--) {
@@ -1264,7 +1156,11 @@
     }
     T.fish = fishDrawn;
     fishDrawn = 0;
-    try { nudgeFish(dt, t); } catch (e) {}
+    T.folk = folkDrawn;
+    folkDrawn = 0;
+    try {
+      if (window.finsWater) window.finsWater.frame(dt);
+    } catch (e) { T.lastErr = String(e && e.message || e); }
     try { tickDrone(); } catch (e) {}
     /* The overlay paints on the frames the tank paints on when a frame rate cap is set
        (pace.js). The steps above still run every frame, on elapsed time. */
@@ -1277,14 +1173,15 @@
   function onPtr(e) {
     if (reduced) return;
     var tank = document.getElementById("tank");
-    if (!tank) return;
+    if (!tank || e.target !== tank || sceneName() !== "tank") return;
     var r = tank.getBoundingClientRect();
-    var x = e.clientX - r.left;
-    var y = e.clientY - r.top;
-    lastPtr.x = r.width ? x / r.width : 0.5;
-    lastPtr.y = r.height ? y / r.height : 0.5;
+    var x = (e.clientX - r.left) * ((window.W || r.width) / r.width);
+    var y = (e.clientY - r.top) * ((window.H || r.height) / r.height);
+    if (y < (window.waterTop || 0) - 14 || y > (window.floorY || r.height)) return;
+    lastPtr.x = window.W ? x / window.W : 0.5;
+    lastPtr.y = window.H ? y / window.H : 0.5;
     addVortex(x, y, e.type === "pointerdown" ? 2.2 : 0.7);
-    if (e.type === "pointerdown") addWave(x, y, 1.2);
+    if (window.finsWater) window.finsWater.disturb(x, y, e.type === "pointerdown" ? 0.5 : 0.1);
   }
   document.addEventListener("pointerdown", function (e) {
     onPtr(e);

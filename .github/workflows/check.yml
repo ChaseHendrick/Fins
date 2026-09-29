@@ -34,6 +34,12 @@ jobs:
       - name: Syntax
         run: npm run check:syntax
 
+      - name: Water stability and coupling
+        run: npm run check:water
+
+      - name: People retain native positions
+        run: npm run check:folk
+
       - name: Build is current
         run: npm run check:build
 

@@ -2529,6 +2529,360 @@
     console.error("Layer feel.js failed to start:", e);
   }
 
+  // src/layers/water.js
+  try {
+    (function() {
+      "use strict";
+      var WATER_STEP = 1 / 120;
+      var WATER_WAKE_CAP = 48;
+      function bounded(value, lo, hi) {
+        return Number.isFinite(value) ? Math.max(lo, Math.min(hi, value)) : lo;
+      }
+      function createSurface(width, count) {
+        var n = Math.round(bounded(count == null ? 64 : count, 16, 96));
+        var h = new Float32Array(n), v = new Float32Array(n), a = new Float32Array(n);
+        var acc = 0;
+        var surface = {
+          width: bounded(width, 64, 4096),
+          height: h,
+          velocity: v,
+          kick: function(x, strength) {
+            if (!Number.isFinite(x) || !Number.isFinite(strength)) return false;
+            var center = bounded(x, 0, 1) * (n - 1);
+            var impulse = bounded(strength, -3, 3) * 28;
+            for (var i = 0; i < n; i++) {
+              var d = (i - center) / 1.8;
+              v[i] = bounded(v[i] - impulse * Math.exp(-d * d), -90, 90);
+            }
+            return true;
+          },
+          sample: function(x) {
+            var u = bounded(x, 0, 1) * (n - 1), i = Math.floor(u);
+            return h[i] + (h[Math.min(n - 1, i + 1)] - h[i]) * (u - i);
+          },
+          advance: function(dt) {
+            if (!Number.isFinite(dt) || dt <= 0) return 0;
+            acc += Math.min(dt, 0.1);
+            var steps = 0;
+            var dx = surface.width / (n - 1);
+            var spread = Math.min(1500, Math.pow(130 / dx, 2));
+            while (acc + 1e-10 >= WATER_STEP && steps < 12) {
+              for (var i = 0; i < n; i++) {
+                var left = h[i ? i - 1 : i], right = h[i < n - 1 ? i + 1 : i];
+                a[i] = (left + right - 2 * h[i]) * spread - h[i] * 5 - v[i] * 2.8;
+              }
+              for (var j = 0; j < n; j++) {
+                v[j] = bounded(v[j] + a[j] * WATER_STEP, -90, 90);
+                h[j] = bounded(h[j] + v[j] * WATER_STEP, -9, 9);
+              }
+              acc -= WATER_STEP;
+              steps++;
+            }
+            return steps;
+          },
+          energy: function() {
+            var sum = 0;
+            for (var i = 0; i < n; i++) sum += h[i] * h[i] + v[i] * v[i] * 0.2;
+            return sum / n;
+          }
+        };
+        return surface;
+      }
+      function createFlow() {
+        var wakes = [], next = 0, scratch = { x: 0, y: 0 };
+        for (var i = 0; i < WATER_WAKE_CAP; i++) wakes.push({ life: 0 });
+        return {
+          wakes,
+          add: function(x, y, vx, vy, radius, swirl) {
+            if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(vx) || !Number.isFinite(vy) || !Number.isFinite(radius)) return false;
+            var w = wakes[next];
+            next = (next + 1) % WATER_WAKE_CAP;
+            w.x = x;
+            w.y = y;
+            w.vx = bounded(vx, -100, 100);
+            w.vy = bounded(vy, -100, 100);
+            w.radius = bounded(radius, 8, 160);
+            w.swirl = bounded(swirl == null ? 0 : swirl, -60, 60);
+            w.age = 0;
+            w.life = 1;
+            return true;
+          },
+          advance: function(dt, sample) {
+            if (!Number.isFinite(dt) || dt <= 0) return;
+            dt = Math.min(dt, 0.1);
+            for (var i2 = 0; i2 < wakes.length; i2++) {
+              var w = wakes[i2];
+              if (!w.life) continue;
+              w.age += dt;
+              w.life = Math.exp(-w.age * 2.4);
+              if (w.life < 6e-3) {
+                w.life = 0;
+                continue;
+              }
+              if (sample) {
+                sample(w.x, w.y, scratch);
+                w.x += bounded(scratch.x, -120, 120) * dt * 0.45;
+                w.y += bounded(scratch.y, -120, 120) * dt * 0.45;
+              }
+            }
+          },
+          at: function(x, y, out) {
+            out = out || { x: 0, y: 0 };
+            out.x = out.y = 0;
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return out;
+            for (var i2 = 0; i2 < wakes.length; i2++) {
+              var w = wakes[i2];
+              if (!w.life) continue;
+              var r = w.radius + w.age * 12;
+              var dx = (x - w.x) / r, dy = (y - w.y) / r;
+              var d2 = dx * dx + dy * dy;
+              if (d2 > 6) continue;
+              var fall = Math.exp(-d2 * 2.5) * w.life;
+              out.x += (w.vx - dy * w.swirl) * fall;
+              out.y += (w.vy + dx * w.swirl) * fall;
+            }
+            out.x = bounded(out.x, -45, 45);
+            out.y = bounded(out.y, -45, 45);
+            return out;
+          },
+          count: function() {
+            var live = 0;
+            for (var i2 = 0; i2 < wakes.length; i2++) if (wakes[i2].life) live++;
+            return live;
+          },
+          clear: function() {
+            for (var i2 = 0; i2 < wakes.length; i2++) wakes[i2].life = 0;
+          }
+        };
+      }
+      var flow = createFlow(), surfaces = [];
+      var motes = [], drops = [];
+      var fishMemory = /* @__PURE__ */ new WeakMap(), foodMemory = /* @__PURE__ */ new WeakSet();
+      var current = { x: 0, y: 0 }, residual = { x: 0, y: 0 };
+      var lastState = null, lastView = -1, lastTime = null, pumpAcc = 0;
+      var geometry = { width: 0, top: 0, bottom: 0, scale: 1 };
+      var metrics = { frames: 0, coupled: 0, fed: 0, dt: 0 };
+      function reducedMotion() {
+        return !!(window.G && window.G.reduceMotion) || !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      }
+      function nativeAt(x, y, out) {
+        out.x = out.y = 0;
+        if (typeof window.currentAt === "function") window.currentAt(x, y, out);
+        out.x = bounded(out.x, -200, 200);
+        out.y = bounded(out.y, -200, 200);
+        return out;
+      }
+      function waterGeometry() {
+        geometry.width = bounded(window.W, 0, 16e3);
+        geometry.top = bounded(window.waterTop, 0, 16e3);
+        geometry.bottom = bounded(window.floorY, geometry.top, 16e3);
+        geometry.scale = bounded(window.S, 0.05, 8);
+        return geometry;
+      }
+      function active() {
+        return window.G && !window.G.title && window.__scene === "tank" && !document.hidden && !window.paused;
+      }
+      function reset(g) {
+        flow.clear();
+        drops.length = 0;
+        fishMemory = /* @__PURE__ */ new WeakMap();
+        foodMemory = /* @__PURE__ */ new WeakSet();
+        lastState = g;
+        lastView = g.view;
+        lastTime = g.t;
+        motes.length = 0;
+        var geo = waterGeometry();
+        for (var i = 0; i < 64; i++) {
+          var u = (i * 0.61803398875 + 0.17) % 1;
+          var v = (i * 0.41421356237 + 0.31) % 1;
+          motes.push({ u, v, x: u * geo.width, y: geo.top + v * (geo.bottom - geo.top), px: 0, py: 0 });
+        }
+      }
+      function disturb(x, y, strength) {
+        var geo = waterGeometry();
+        if (!active() || !Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > geo.width || y < geo.top - 14 || y > geo.bottom) return false;
+        strength = bounded(strength, 0, 2);
+        flow.add(x, Math.max(geo.top + 8, y), 0, 15 * strength, 54 * geo.scale, strength * 12);
+        var surface = surfaces[window.G.view];
+        if (surface) surface.kick(x / Math.max(1, geo.width), strength * 0.5);
+        if (y < geo.top + 65 * geo.scale) {
+          drops.push({ x, y: geo.top + 4, radius: 4, life: 1, strength });
+          if (drops.length > 12) drops.shift();
+        }
+        return true;
+      }
+      function stepFish(list, dt, geo) {
+        var emitted = 0;
+        for (var i = 0; i < list.length; i++) {
+          var f = list[i];
+          if (!f || f.dead || !Number.isFinite(f.x) || !Number.isFinite(f.y) || !Number.isFinite(f.vx) || !Number.isFinite(f.vy)) continue;
+          var memory = fishMemory.get(f);
+          if (!memory) {
+            memory = { wakeT: 0.05 + i % 7 * 0.06 };
+            fishMemory.set(f, memory);
+          }
+          var r = typeof window.fishRadius === "function" ? window.fishRadius(f) : 20 * geo.scale;
+          if (!Number.isFinite(r) || r < 2 || r > geo.width * 0.25) continue;
+          flow.at(f.x, f.y, residual);
+          var response = bounded(16 * geo.scale / r, 0.18, 1.2) * dt * 0.32;
+          f.vx += residual.x * response;
+          f.vy += residual.y * response;
+          if (Math.abs(residual.x) + Math.abs(residual.y) > 0.05) metrics.coupled++;
+          memory.wakeT -= dt;
+          var speed = Math.hypot(f.vx, f.vy);
+          if (memory.wakeT > 0 || speed < 12 * geo.scale || emitted >= 6) continue;
+          memory.wakeT = Math.max(memory.wakeT, -0.12) + 0.3 + i % 5 * 0.035;
+          var ux = f.vx / speed, uy = f.vy / speed;
+          var tailX = f.x - ux * r * 1.25, tailY = f.y - uy * r * 1.25;
+          var push = Math.min(18, speed * 0.08);
+          flow.add(tailX - uy * r * 0.35, tailY + ux * r * 0.35, ux * push, uy * push, r * 0.9, 6);
+          flow.add(tailX + uy * r * 0.35, tailY - ux * r * 0.35, ux * push, uy * push, r * 0.9, -6);
+          emitted++;
+        }
+      }
+      function stepFood(dt, geo) {
+        var food = window.food;
+        if (!Array.isArray(food)) return;
+        for (var i = 0; i < food.length; i++) {
+          var p = food[i];
+          if (!p || p.floor || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+          if (!foodMemory.has(p)) {
+            foodMemory.add(p);
+            disturb(p.x, p.y, p.auto ? 0.35 : 0.75);
+            metrics.fed++;
+          }
+          flow.at(p.x, p.y, residual);
+          p.x = bounded(p.x + residual.x * dt * 0.28, 6, Math.max(6, geo.width - 6));
+          if (Number.isFinite(p.vy)) p.vy += residual.y * dt * 0.2;
+        }
+      }
+      function frame(dt) {
+        var g = window.G;
+        if (!g || !Number.isFinite(g.t)) return;
+        if (g !== lastState || g.view !== lastView) reset(g);
+        var simDt = lastTime == null ? 0 : bounded(g.t - lastTime, 0, 0.1);
+        lastTime = g.t;
+        metrics.dt = simDt;
+        metrics.frames++;
+        var geo = waterGeometry();
+        if (!document.hidden && !window.paused && simDt > 0) {
+          var visualDt = bounded(dt, 0, 0.1);
+          pumpAcc += visualDt;
+          for (var s = 0; s < surfaces.length; s++) {
+            if (!surfaces[s]) continue;
+            surfaces[s].advance(visualDt);
+            if (pumpAcc >= 0.15) surfaces[s].kick(0.86, Math.sin(g.t * 5 + s) * (window.clogged ? 0.012 : 0.04));
+          }
+          if (pumpAcc >= 0.15) pumpAcc = 0;
+        }
+        if (!active() || geo.width < 30 || geo.bottom - geo.top < 30) return;
+        if (simDt <= 0) return;
+        flow.advance(simDt, nativeAt);
+        stepFish(Array.isArray(g.fish) ? g.fish : [], simDt, geo);
+        stepFood(simDt, geo);
+        for (var i = drops.length - 1; i >= 0; i--) {
+          drops[i].life -= simDt * 0.85;
+          drops[i].radius += simDt * 84 * geo.scale;
+          if (drops[i].life <= 0) drops.splice(i, 1);
+        }
+        for (var m = 0; m < motes.length; m++) {
+          var p = motes[m];
+          p.px = p.x;
+          p.py = p.y;
+          nativeAt(p.x, p.y, current);
+          flow.at(p.x, p.y, residual);
+          p.x += (current.x + residual.x) * simDt;
+          p.y += (current.y + residual.y + 0.6 * geo.scale) * simDt;
+          if (p.x < 8 || p.x > geo.width - 8 || p.y < geo.top + 8 || p.y > geo.bottom - 8) {
+            p.x = 8 + p.u * Math.max(1, geo.width - 16);
+            p.y = geo.top + 8 + p.v * Math.max(1, geo.bottom - geo.top - 16);
+            p.px = p.x;
+            p.py = p.y;
+          }
+        }
+      }
+      function paint(ctx) {
+        if (!active() || reducedMotion() || !ctx) return;
+        var geo = waterGeometry();
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, geo.top + 8, geo.width, geo.bottom - geo.top - 8);
+        ctx.clip();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.strokeStyle = "rgba(204,236,240,.15)";
+        ctx.lineWidth = Math.max(0.6, geo.scale * 0.65);
+        ctx.beginPath();
+        for (var i = 0; i < motes.length; i++) {
+          var p = motes[i];
+          nativeAt(p.x, p.y, current);
+          var lx = bounded(current.x * 0.055, -5, 5), ly = bounded(current.y * 0.055, -5, 5);
+          ctx.moveTo(p.x - lx * 0.5, p.y - ly * 0.5);
+          ctx.lineTo(p.x + lx * 0.5 + 0.5, p.y + ly * 0.5 + 0.5);
+        }
+        ctx.stroke();
+        for (var d = 0; d < drops.length; d++) {
+          var drop = drops[d];
+          ctx.globalAlpha = drop.life * drop.strength * 0.25;
+          ctx.strokeStyle = "#b9e3e5";
+          ctx.beginPath();
+          ctx.ellipse(drop.x, drop.y + 6, drop.radius, drop.radius * 0.07 + 0.8, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      function paintSurface(ctx, tk, t, index) {
+        if (!ctx || !tk || tk[2] < 8 || tk[3] < 8 || !Number.isInteger(index) || index < 0 || index >= 16) return;
+        var surface = surfaces[index];
+        if (!surface) surface = surfaces[index] = createSurface(tk[2], 48);
+        surface.width = bounded(tk[2], 64, 4096);
+        var x = tk[0], y = tk[1] + tk[3] * 0.105, w = tk[2];
+        var amplitude = reducedMotion() ? 0 : Math.min(1, tk[3] / 160);
+        ctx.save();
+        ctx.strokeStyle = "rgba(211,239,238,.42)";
+        ctx.lineWidth = Math.max(0.6, Math.min(1.2, tk[3] * 9e-3));
+        ctx.beginPath();
+        for (var i = 0; i <= 48; i++) {
+          var u = i / 48, yy = y + surface.sample(u) * amplitude;
+          if (i) ctx.lineTo(x + w * u, yy);
+          else ctx.moveTo(x, yy);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(99,181,193,.12)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (var j = 0; j <= 48; j++) {
+          var v = j / 48, yy2 = y + 3 + surface.sample(v) * amplitude * 0.5;
+          if (j) ctx.lineTo(x + w * v, yy2);
+          else ctx.moveTo(x, yy2);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      window.finsWater = {
+        createSurface,
+        createFlow,
+        frame,
+        paint,
+        paintSurface,
+        disturb,
+        stats: function() {
+          return {
+            wakes: flow.count(),
+            wakeCapacity: WATER_WAKE_CAP,
+            motes: motes.length,
+            surfaces: surfaces.length,
+            coupled: metrics.coupled,
+            fed: metrics.fed,
+            frames: metrics.frames,
+            dt: metrics.dt
+          };
+        }
+      };
+    })();
+  } catch (e) {
+    console.error("Layer water.js failed to start:", e);
+  }
+
   // src/layers/tech.js
   try {
     (function() {
@@ -2551,6 +2905,7 @@
       var lastFloorY = 0;
       var lastWx = {};
       var fishDrawn = 0;
+      var folkDrawn = 0;
       function clamp(x, a, b) {
         return x < a ? a : x > b ? b : x === x ? x : a;
       }
@@ -2583,6 +2938,7 @@
         try {
           if (document.body.classList.contains("titling")) return "title";
           if (document.body.classList.contains("work")) return "work";
+          if (window.__scene) return String(window.__scene);
           if (window.G && window.G.scene) return String(window.G.scene);
           if (typeof rr === "function") return String(rr() || "tank");
         } catch (e) {
@@ -2677,13 +3033,6 @@
           }
         }
         return Math.sqrt(d);
-      }
-      function gerstnerY(x, t, seed) {
-        var y = 0;
-        y += 2.4 * Math.sin(x * 0.045 + t * 1.15 + seed);
-        y += 1.4 * Math.sin(x * 0.09 + t * 1.7 + seed * 1.7);
-        y += 0.7 * Math.sin(x * 0.18 + t * 2.4 + seed * 0.4);
-        return y;
       }
       var waves = [];
       function addWave(x, y, amp) {
@@ -3093,10 +3442,6 @@
         }
         return t.p;
       }
-      var folkPrev = [];
-      var folkCur = [];
-      var folkOff = /* @__PURE__ */ Object.create(null);
-      var lastFolkT = 0;
       var overlay = null, octx = null, grain = null, grainT = 0;
       var bloomA = null, bloomB = null, bloomTick = 0;
       var ovW = 0, ovH = 0, ovDpr = 0;
@@ -3201,9 +3546,9 @@
         if (!bloomReady || !octx) return;
         octx.save();
         octx.globalCompositeOperation = "lighter";
-        octx.globalAlpha = 0.32;
+        octx.globalAlpha = 0.1;
         octx.drawImage(bloomB, 0, 0, w, h);
-        octx.globalAlpha = 0.12;
+        octx.globalAlpha = 0.035;
         octx.filter = "blur(18px)";
         octx.drawImage(bloomB, -w * 0.04, 0, w * 1.08, h);
         octx.filter = "none";
@@ -3223,7 +3568,7 @@
         grainT += 1;
         octx.save();
         octx.globalCompositeOperation = "overlay";
-        octx.globalAlpha = quiet ? 0.025 : 0.045;
+        octx.globalAlpha = quiet ? 0.018 : 0.025;
         var ox = grainT * 1.7 % 96, oy = grainT * 1.1 % 96;
         var pat = octx.createPattern(grain, "repeat");
         octx.translate(-ox, -oy);
@@ -3237,34 +3582,7 @@
         octx.fillStyle = vig;
         octx.fillRect(0, 0, w, h);
         octx.restore();
-        var sc = sceneName();
-        if (sc === "tank" && !quiet) {
-          var t = now / 1e3;
-          fillCaustics(octx, 0, h * 0.08, w, h * 0.92, t, 0.09);
-          octx.save();
-          octx.globalCompositeOperation = "lighter";
-          octx.strokeStyle = "rgba(200,235,255,.22)";
-          octx.lineWidth = 2.2;
-          octx.beginPath();
-          var top = h * 0.09;
-          octx.moveTo(0, top);
-          for (var x = 0; x <= w; x += 8) {
-            octx.lineTo(x, top + gerstnerY(x, t, 0.2));
-          }
-          octx.stroke();
-          var ray = octx.createLinearGradient(w * 0.5, 0, w * 0.55, h * 0.7);
-          ray.addColorStop(0, "rgba(180,220,255,.08)");
-          ray.addColorStop(1, "rgba(180,220,255,0)");
-          octx.fillStyle = ray;
-          octx.beginPath();
-          octx.moveTo(w * 0.36, 0);
-          octx.lineTo(w * 0.64, 0);
-          octx.lineTo(w * 0.74, h);
-          octx.lineTo(w * 0.26, h);
-          octx.fill();
-          octx.restore();
-          drawWaves(octx, null);
-        }
+        if (sceneName() === "tank" && !quiet && window.finsWater) window.finsWater.paint(octx);
       }
       var drone = null;
       function audioCtx() {
@@ -3367,40 +3685,6 @@
           }
         }
       }
-      function nudgeFish(dt, t) {
-        var L = window.G;
-        if (!L || !Array.isArray(L.fish)) return;
-        if (L.gunScare && (L.t || 0) < L.gunScare) return;
-        if (sceneName() !== "tank") return;
-        var n = L.fish.length;
-        T.fish = n;
-        var k2 = 12 * dt;
-        for (var i = 0; i < n; i++) {
-          var f = L.fish[i];
-          if (!f || f.dead) continue;
-          curl(f.x || 0, f.y || 0, t);
-          if (typeof f.vx === "number") f.vx += _cx * k2;
-          if (typeof f.vy === "number") f.vy += _cy * k2 * 0.55;
-          for (var j = i + 1; j < n && j < i + 6; j++) {
-            var o = L.fish[j];
-            if (!o || o.dead) continue;
-            var dx = (f.x || 0) - (o.x || 0);
-            var dy = (f.y || 0) - (o.y || 0);
-            var d2 = dx * dx + dy * dy;
-            if (d2 > 4 && d2 < 900) {
-              var push = 8 * dt / d2;
-              if (typeof f.vx === "number") {
-                f.vx += dx * push;
-                o.vx -= dx * push;
-              }
-              if (typeof f.vy === "number") {
-                f.vy += dy * push * 0.6;
-                o.vy -= dy * push * 0.6;
-              }
-            }
-          }
-        }
-      }
       function clipTank(ctx, tk, i) {
         var pts = window.__shopTankPts;
         var q = pts && pts[i] && pts[i].q;
@@ -3440,14 +3724,7 @@
             }
             fillCaustics(ctx, tx, ty + th * 0.18, tw, th * 0.64, t + i, wx.clog ? 0.1 : live ? 0.16 : 0.24);
             var sy = ty + th * 0.105;
-            ctx.strokeStyle = "rgba(210,240,255,.42)";
-            ctx.lineWidth = 1.8;
-            ctx.beginPath();
-            ctx.moveTo(tx, sy);
-            for (var px = 0; px <= tw; px += 4) {
-              ctx.lineTo(tx + px, sy + gerstnerY(px, t, i * 0.7));
-            }
-            ctx.stroke();
+            if (window.finsWater) window.finsWater.paintSurface(ctx, tk, t, i);
             ctx.save();
             ctx.globalCompositeOperation = "lighter";
             var snell = ctx.createRadialGradient(tx + tw * 0.5, sy + 4, 2, tx + tw * 0.5, sy + 8, tw * 0.38);
@@ -3477,7 +3754,7 @@
             drawWaves(ctx, [tx + 2, ty + th * 0.08, tw - 4, th * 0.78]);
             ctx.restore();
             glassOnTank(ctx, tk, t, i);
-            if (floorY) {
+            if (floorY && !live) {
               ctx.save();
               ctx.globalCompositeOperation = "lighter";
               var cx = tx + tw * 0.5 + Math.sin(t * 0.8 + i) * 6;
@@ -3563,20 +3840,23 @@
         ctx.stroke();
         ctx.restore();
       }
-      var fishPrev = /* @__PURE__ */ Object.create(null);
+      var fishPrev = /* @__PURE__ */ new WeakMap();
       wrap("drawFishSprite", function(orig, self, args) {
         var a = args[0] || {};
         if (a.x != null && a.y != null && a.fish) {
-          var id = fishId(a.fish) || a.x;
-          var pr = fishPrev[id];
-          if (pr) {
-            a.x = pr.x + (a.x - pr.x) * 0.38;
-            a.y = pr.y + (a.y - pr.y) * 0.38;
+          var pr = fishPrev.get(a.fish);
+          if (pr && Math.hypot(a.x - pr.x, a.y - pr.y) < 160) {
+            var blend = 1 - Math.exp(-29 * frameDt);
+            a.x = pr.x + (a.x - pr.x) * blend;
+            a.y = pr.y + (a.y - pr.y) * blend;
             args[0] = a;
           }
-          fishPrev[id] = { x: a.x, y: a.y };
+          if (!pr) pr = {};
+          pr.x = a.x;
+          pr.y = a.y;
+          fishPrev.set(a.fish, pr);
         }
-        var a = args[0] || {};
+        a = args[0] || {};
         var r = orig.apply(self, args);
         if (!r || !a.ctx || reduced) return r;
         try {
@@ -3644,36 +3924,7 @@
         return r;
       });
       wrap("folkDraw", function(orig, self, args) {
-        var ctx = args[0], x = args[1], y = args[2], size = args[3], look = args[9];
-        var now = typeof performance !== "undefined" ? performance.now() : Date.now();
-        if (now - lastFolkT > 32) {
-          folkPrev = folkCur;
-          folkCur = [];
-          lastFolkT = now;
-        }
-        var ox = 0, oy = 0;
-        var rad = Math.max(10, (size || 20) * 0.38);
-        var src = folkPrev.length ? folkPrev : folkCur;
-        for (var i = 0; i < src.length; i++) {
-          var o = src[i];
-          var dx = x - o.x, dy = y - o.y;
-          var d2 = dx * dx + dy * dy;
-          var min = rad + o.r;
-          if (d2 > 0.01 && d2 < min * min) {
-            var d = Math.sqrt(d2);
-            var push = (min - d) * 0.5;
-            ox += dx / d * push;
-            oy += dy / d * push * 0.32;
-          }
-        }
-        var id = look && look.id != null ? look.id : (x | 0) + ":" + (y | 0);
-        var sm = folkOff[id] || (folkOff[id] = { x: 0, y: 0 });
-        sm.x = sm.x * 0.7 + ox * 0.3;
-        sm.y = sm.y * 0.7 + oy * 0.3;
-        args[1] = x + sm.x;
-        args[2] = y + sm.y;
-        folkCur.push({ x: args[1], y: args[2], r: rad, id });
-        T.folk = folkCur.length;
+        folkDrawn++;
         return orig.apply(self, args);
       });
       wrap("drawShopBackdrop", function(orig, self, args) {
@@ -3726,7 +3977,6 @@
         frameDt = dt;
         acc += dt;
         if (acc > 0.2) acc = 0.2;
-        var t = now / 1e3;
         while (acc >= STEP) {
           simT += STEP;
           for (var i = vortices.length - 1; i >= 0; i--) {
@@ -3749,9 +3999,12 @@
         }
         T.fish = fishDrawn;
         fishDrawn = 0;
+        T.folk = folkDrawn;
+        folkDrawn = 0;
         try {
-          nudgeFish(dt, t);
+          if (window.finsWater) window.finsWater.frame(dt);
         } catch (e) {
+          T.lastErr = String(e && e.message || e);
         }
         try {
           tickDrone();
@@ -3766,14 +4019,15 @@
       function onPtr(e) {
         if (reduced) return;
         var tank = document.getElementById("tank");
-        if (!tank) return;
+        if (!tank || e.target !== tank || sceneName() !== "tank") return;
         var r = tank.getBoundingClientRect();
-        var x = e.clientX - r.left;
-        var y = e.clientY - r.top;
-        lastPtr.x = r.width ? x / r.width : 0.5;
-        lastPtr.y = r.height ? y / r.height : 0.5;
+        var x = (e.clientX - r.left) * ((window.W || r.width) / r.width);
+        var y = (e.clientY - r.top) * ((window.H || r.height) / r.height);
+        if (y < (window.waterTop || 0) - 14 || y > (window.floorY || r.height)) return;
+        lastPtr.x = window.W ? x / window.W : 0.5;
+        lastPtr.y = window.H ? y / window.H : 0.5;
         addVortex(x, y, e.type === "pointerdown" ? 2.2 : 0.7);
-        if (e.type === "pointerdown") addWave(x, y, 1.2);
+        if (window.finsWater) window.finsWater.disturb(x, y, e.type === "pointerdown" ? 0.5 : 0.1);
       }
       document.addEventListener("pointerdown", function(e) {
         onPtr(e);
@@ -7853,6 +8107,13 @@
           w: "<p>A clogged filter is the shop turning people around at the door. Sick fish make the ones who stay talk. Ich is an outbreak, not a mood. The nitrogen cycle does not care that you were in the Atlas.</p><p>{filter}</p><p><b>What to do about it:</b> click the clog pill on the HUD. Feed less if ammonia is up. Heat if the room is following a cold street. The Calendar tells you the season; winter will punish an unheated tank.</p>"
         },
         {
+          id: "k_current",
+          sec: "The animals",
+          t: "Water in motion",
+          tags: "water physics current motion wake feeding filter fins flow ripples",
+          w: "<p>The filter moves the water. Small suspended flecks follow the same current the fish swim through. Swimming fish leave brief wakes; feeding disturbs nearby water, and pellets drift with it.</p><p>The tank surface settles after a disturbance. Shop tanks have their own small surface waves. A change of tank clears the previous tank's wakes.</p><p><b>What to do about it:</b> feed once and watch the drift. Clear a clogged filter before feeding again. A calm surface is not a water-quality reading; the filter and chemistry still need care.</p>"
+        },
+        {
           id: "k_broke",
           sec: "When you are stuck",
           t: "The till is thin",
@@ -7933,7 +8194,7 @@
           id: "k_map",
           sec: "The quarter",
           t: "The street outside",
-          tags: "map salem north end jobs crowd walkins bored baker window",
+          tags: "map salem north end jobs crowd walkins bored baker window routes landmarks night lights",
           w: "<p>The Map is the North End, not a circle of ants. People have homes, trades, faiths, and a reason to be on a block. Some of them walk to your door. Some go to Haymarket. Some are at sea.</p><p>{baker} {windows}</p><p><b>What to do about it:</b> open Map when the shop is quiet. Click a window. Life lists who has been in. A campaign is a bigger circle, not just a multiplier.</p>"
         },
         {
@@ -18441,7 +18702,14 @@
       }
       function toView(x, y, w, h) {
         try {
-          if (typeof window.townToView === "function") return window.townToView(x, y, w, h);
+          if (typeof window.townToView === "function") {
+            var screen = window.townScreen;
+            if (screen && screen.width > 0 && screen.height > 0) {
+              var xy = window.townToView(x, y, screen.width, screen.height);
+              return [screen.left + xy[0], screen.top + xy[1]];
+            }
+            return window.townToView(x, y, w, h);
+          }
         } catch (e) {
         }
         var cam = window.townCam || { left: 482, top: 472, span: 96 };
@@ -18493,12 +18761,14 @@
         }
       }
       function windowRect(home, index, w, h) {
-        var s = shopXY();
+        var place = placeById(placeOf(home));
+        var s = place && isFinite(place.x) ? [place.x, place.y] : shopXY();
         var v = toView(s[0], s[1], w, h);
-        var ang = -2.35 + index * 0.62;
-        var rad = Math.max(78, w * 0.085);
-        var bw = Math.max(30, w * 0.028);
-        var bh = Math.max(38, w * 0.036);
+        var mapWidth = window.townScreen ? window.townScreen.width : w;
+        var ang = -2.35 + index % 8 * 0.78;
+        var rad = Math.max(18, mapWidth * 0.035) + Math.floor(index / 8) * 8;
+        var bw = Math.max(16, Math.min(25, mapWidth * 0.034));
+        var bh = bw * 1.16;
         var wx = v[0] + Math.cos(ang) * rad;
         var wy = v[1] + Math.sin(ang) * rad * 0.72;
         return {
@@ -18513,9 +18783,15 @@
       function shopWindowRect(w, h) {
         var s = shopXY();
         var v = toView(s[0], s[1], w, h);
-        var bw = Math.max(34, w * 0.032);
-        var bh = Math.max(42, w * 0.04);
-        return { x: v[0] + 16, y: v[1] - bh - 10, w: bw, h: bh, shop: true };
+        var mapWidth = window.townScreen ? window.townScreen.width : w;
+        var symbolSize = Math.max(18, Math.min(36, mapWidth * 0.045));
+        return {
+          x: v[0] - symbolSize * 10 / 32,
+          y: v[1] - symbolSize * 13 / 32,
+          w: symbolSize * 12 / 32,
+          h: symbolSize * 10 / 32,
+          shop: true
+        };
       }
       function drawTinyFish(ctx, rx, t, col, dead) {
         if (dead) return;
@@ -18538,8 +18814,10 @@
         var dead = !!(home && home.dead);
         var live = home && !dead;
         ctx.save();
-        ctx.fillStyle = "rgba(18,12,8,.72)";
-        ctx.fillRect(rx.x - 2, rx.y - 3, rx.w + 4, rx.h + 6);
+        ctx.fillStyle = "rgba(20,28,30,.86)";
+        ctx.beginPath();
+        ctx.roundRect(rx.x - 2, rx.y - 2, rx.w + 4, rx.h + 4, rx.shop ? 1 : 4);
+        ctx.fill();
         if (dead) {
           ctx.fillStyle = "rgba(6,8,12,.92)";
           ctx.fillRect(rx.x, rx.y, rx.w, rx.h);
@@ -18568,20 +18846,22 @@
         }
         ctx.strokeStyle = hi ? "rgba(244,196,83,.95)" : "rgba(244,214,160,.55)";
         ctx.lineWidth = hi ? 2.5 : 1.4;
-        ctx.strokeRect(rx.x, rx.y, rx.w, rx.h);
+        ctx.beginPath();
+        ctx.roundRect(rx.x, rx.y, rx.w, rx.h, rx.shop ? 1 : 3);
+        ctx.stroke();
         if (home && home.named && !dead) {
           ctx.strokeStyle = "rgba(244,196,83,.85)";
           ctx.lineWidth = 2;
           ctx.strokeRect(rx.x - 1.5, rx.y - 1.5, rx.w + 3, rx.h + 3);
         }
         var cap = "";
-        if (rx.shop) cap = "Fin's";
+        if (rx.shop) cap = "";
         else if (home && home.dead) cap = "dark";
         else if (home && home.neighbor) cap = (home.who || "Mae").split(" ")[0];
         else if (home && home.nick) cap = home.nick;
         else if (home) cap = home.sp || "window";
         if (cap) {
-          ctx.font = "700 " + Math.max(10, rx.w * 0.36 | 0) + "px Nunito, sans-serif";
+          ctx.font = "600 " + Math.max(9, Math.min(11, rx.w * 0.4 | 0)) + "px Nunito, system-ui, sans-serif";
           ctx.textAlign = "center";
           ctx.fillStyle = "rgba(8,12,18,.78)";
           var cw = ctx.measureText(cap).width + 8;
@@ -18609,14 +18889,17 @@
         var sc = sceneName();
         if (sc !== "street") {
           hits = [];
-          if (octx && overlay) octx.clearRect(0, 0, overlay.width, overlay.height);
+          if (overlay && overlay.width) {
+            overlay.width = overlay.height = 0;
+          }
           return;
         }
         resize();
         var w = window.innerWidth;
         var h = window.innerHeight;
         octx.clearRect(0, 0, w, h);
-        var t = now();
+        var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var t = reduced ? 0 : now();
         var nite = night();
         var hs = homes();
         hits = [];
@@ -18627,6 +18910,8 @@
           var home = hs[i];
           if (!home) continue;
           var rx = windowRect(home, i, w, h);
+          var screen = window.townScreen;
+          if (screen && (rx.x < screen.left + 3 || rx.y < screen.top + 4 || rx.x + rx.w > screen.left + screen.width - 3 || rx.y + rx.h + 16 > screen.top + screen.height - 30)) continue;
           hits.push(rx);
           drawOne(octx, rx, t, nite, hover === hits.length - 1);
         }

@@ -1,5 +1,26 @@
 # Next steps
 
+## September 29 update
+
+The water and neighborhood pass is described in [polish.md](polish.md). Shop items
+1 through 4 below are resolved: explicit sprite grids, complete keeper and staff
+art, stable single-person frames, and overlays fitted to the v5 painted glass.
+The keeper's drawing layer no longer pushes against its own previous frame, which
+caused visible back-and-forth sliding. The duplicate map caption is removed. The street window overlay now releases its
+full-size buffers when inactive. Bloom is lighter, but the broader consolidation
+of room overlays in items 6 and 8 remains open. People scale and the old shop door
+hit areas in items 5 and 7 still need a separate pass.
+
+The README and docs now contain captures of the current rooms. GitHub Pages is
+live at [the current account address](https://chasehendrick.github.io/Fins/);
+the older SharpMeow Pages link returned 404 and has been updated.
+
+The neighborhood uses the existing map and coordinates with clearer symbols, routes,
+labels and night lighting. A new OSM vector map has not been imported; the network
+restriction described below still applies to that proposal.
+
+## Earlier findings
+
 Written at the end of the September 2026 improvement pass (PRs #31 and #32). Each item says what
 was found, how it was checked, and where to start. Items marked "measured" were reproduced in
 Playwright Chromium; items marked "not yet verified in game" come from reading files and need a

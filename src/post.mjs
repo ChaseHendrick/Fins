@@ -8,6 +8,7 @@ import "./layers/pace.js";
 import "./layers/bed.js";
 import "./layers/nn.js";
 import "./layers/feel.js";
+import "./layers/water.js";
 import "./layers/tech.js";
 import "./layers/life.js";
 import "./layers/saga.js";

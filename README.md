@@ -3,7 +3,7 @@
 A harbor aquarium shop that keeps going after you look away.
 
 <p align="center">
-  <img src="docs/window.jpg" alt="Rain on the glass. Four tanks still running. The till is a run." width="900">
+  <img src="docs/screenshots/shop.png" alt="The current shop: painted glass, living tank stock, and the keeper on the open floor." width="900">
 </p>
 
 You open in Year 1000. The tanks are already running. People come in off the street for a fish, for change, for a look, or because they always walk this block at six. The till is a run. The floor is wet or it isn't. The record does not close.
@@ -24,9 +24,27 @@ You open in Year 1000. The tanks are already running. People come in off the str
 
 Most idle games are a number that goes up while you are in another tab. Fin's is a room you can fail in. The water has a temperature. The baker on the next block remembers the last fish bag. A named fish will not sell if it is holding too still. A thousand years of people already lived on this street before you hung the sign, and they did not stop when the clock hit present day.
 
-**[Play in your browser](https://sharpmeow.github.io/Fins/)** · [Download for Mac, Windows or Linux](https://github.com/SharpMeow/Fins/releases) · [Contribute](CONTRIBUTING.md)
+**[Play in your browser](https://chasehendrick.github.io/Fins/)** · [Download for Mac, Windows or Linux](https://github.com/ChaseHendrick/Fins/releases) · [Contribute](CONTRIBUTING.md)
 
 The source is public under [PolyForm Small Business 1.0.0](LICENSE): free to use, change and share if you are an individual, or if your company has fewer than 100 people and less than 1,000,000 USD of revenue in its prior tax year. The license has the details.
+
+## Water, shop and neighborhood
+
+The water moves with the fish. Suspended particles follow the tank's existing current field; swimming and feeding create local wakes that gently move nearby fish and pellets. The small shop tanks have damped spring waterlines. Fish motion follows elapsed time, and lighter bloom leaves the glass and the animals clearer.
+
+<p align="center">
+  <img src="docs/screenshots/tank.png" alt="The Tank room with one water surface, clearer glass, swimming fish, food and current-driven particles." width="900">
+</p>
+
+The shop's eight stock slots fit the painted glass. Keeper and customer frames draw one person at a time, with complete clothing and stable feet. People follow the game's movement without the old drawing effect pushing them against their own previous frames. In the neighborhood, readable labels, landmark symbols, routes, traffic and evening lamps show where people are going. The Atlas panel selects people at their displayed positions; household fish windows follow the map's actual bounds.
+
+<p align="center">
+  <img src="docs/screenshots/map.png" alt="The North End map with named destinations, simulated travel links, people and the shop's aquarium window." width="900">
+</p>
+
+These are captures from the September 29 build, with external fonts blocked to check the fallback layout. The map retains its existing coordinates and aerial image; its symbols and travel lines describe the game, not a new survey. The wake layer builds on the existing fluid simulation, with bounded pools and transient state. Aquarium chemistry still depends on how you care for the tank.
+
+[See the changes and screenshots](docs/polish.md) · [Map scale and interactions](docs/town-map.md) · [Remaining work](docs/next-steps.md)
 
 ---
 
@@ -34,15 +52,15 @@ The source is public under [PolyForm Small Business 1.0.0](LICENSE): free to use
 
 Aquarium games give you a tank. Shop games give you a till. Idle games give you a number. Strategy games give you a map. Fin's is the first one that is all four at once, and then it does a thing none of them do.
 
-**The tank is a choir.** Every living fish is a voice. The shop's music is not a playlist — it is the water, singing what it has seen. A named fish carries the melody. Sell the last of a line and a voice drops; the gold line under the name says so. Raise a name from the pages and the whole chord comes back a half-step off. Fever, a beast off the harbor, a boycott, a wet aisle: they detune it. People at the glass can hear it. They say "that one watched me." Work mode turns it into the fluorescent hum, and the hum still sours when the water is off. No aquarium game, no shop sim, no idle, uses its inventory as the score.
+**The tank is a choir.** Every living fish is a voice. The shop's music is not a playlist; it is the water, singing what it has seen. A named fish carries the melody. Sell the last of a line and a voice drops; the gold line under the name says so. Raise a name from the pages and the whole chord comes back a half-step off. Fever, a beast off the harbor, a boycott, a wet aisle: they detune it. People at the glass can hear it. They say "that one watched me." Work mode turns it into the fluorescent hum, and the hum still sours when the water is off. No aquarium game, no shop sim, no idle, uses its inventory as the score.
 
-**The shop is porous.** Every other shop sim deletes what you sell. Fin's does not. A fish bag is not a deletion. They go home with someone on Salem. The baker's window is a tank. If they live, she will say so. If they breed, she brings the fry. If they die on the block, the name goes in the book from the street, not the glass. The choir can still hear a named one that left. At night the harbor comes in under the boards — not rain, the sea, on the spring tide. Named fish lean with it. The aisle dries. The tide does not care. When a road inland is cut, the inland town writes. A letter on the counter: a place, a pair, a fish. Fill it. A road to the harbor can reopen. Leave it five days and the gold line stays late. Nobody else has done this: the street keeps your stock, the sea keeps a key to the door, and the unfinished thing on the counter is a letter from a town you have only read.
+**The shop is porous.** Every other shop sim deletes what you sell. Fin's does not. A fish bag is not a deletion. They go home with someone on Salem. The baker's window is a tank. If they live, she will say so. If they breed, she brings the fry. If they die on the block, the name goes in the book from the street, not the glass. The choir can still hear a named one that left. At night the harbor comes in under the boards, not rain, the sea, on the spring tide. Named fish lean with it. The aisle dries. The tide does not care. When a road inland is cut, the inland town writes. A letter on the counter: a place, a pair, a fish. Fill it. A road to the harbor can reopen. Leave it five days and the gold line stays late. Nobody else has done this: the street keeps your stock, the sea keeps a key to the door, and the unfinished thing on the counter is a letter from a town you have only read.
 
-**You are late.** You hung the sign in Year 1000. Someone kept this shop before you — Rook, Nedda, Asa, Wren, Pim, once Mae's aunt. The street still uses their names. A fish in the tank is theirs. The baker will say you're not them. Sell that fish and a kid asks where it went. The remaining of a pair holds still, because the other one is in a window on Salem.
+**You are late.** You hung the sign in Year 1000. Someone kept this shop before you: Rook, Nedda, Asa, Wren, Pim, once Mae's aunt. The street still uses their names. A fish in the tank is theirs. The baker will say you're not them. Sell that fish and a kid asks where it went. The remaining of a pair holds still, because the other one is in a window on Salem.
 
 **While you were gone.** Idle games pay you for looking away. Fin's writes what you missed. The baker came, or she walked. The filter clogged. The harbor came in. A named fish held still. A window on Salem went dark. The gold line is the first thing that happened without you. Life has the rest. The shop kept going. That was the promise on the first line.
 
-**The glass is two-way.** The shop window is a shopfront. People on Salem see the tank. Rain, night, etch, a risen name, a fish holding still: they see that from the street. They come in because of what they saw, or they walk. The glass etches from the harbor. Oak rots where the puddle sat. Iron rusts at the filter. Rotten boards hold the wet. The aisle is drier. It does not clean the glass. Window wash does — vinegar and newsprint, Harbor Supply. Then they can see in. Nobody else has a shop whose window is an optical system and whose building is a chemistry problem.
+**The glass is two-way.** The shop window is a shopfront. People on Salem see the tank. Rain, night, etch, a risen name, a fish holding still: they see that from the street. They come in because of what they saw, or they walk. The glass etches from the harbor. Oak rots where the puddle sat. Iron rusts at the filter. Rotten boards hold the wet. The aisle is drier. It does not clean the glass. Window wash does, vinegar and newsprint, Harbor Supply. Then they can see in. Nobody else has a shop whose window is an optical system and whose building is a chemistry problem.
 
 **Windows on Salem are tanks.** You sold a fish. Open Map. Their window is lit. A tiny one swims in it. Night, they glow. They die, the window goes dark. Click it. The gold line names the house. The baker's window is the first one you learn to look for. Fin's own window is there too: from the street, they can see in. The choir already heard the ones that left. Now you can see them.
 
@@ -80,7 +98,7 @@ Aquarium games give you a tank. Shop games give you a till. Idle games give you 
 
 **The atlas walks in.** Other games put cities, leaders, wonders, and wars on a map you leave the shop to look at. Fin's does not. A settler wants a pair for a shop that is not this one. A person of an inland civ comes with an agenda. A great merchant pays double; a prophet founds a belief; an admiral wants a pair for a flagship. An inland town is raising a wonder and pilgrims come to look. A hamlet sends an envoy and who still bags here is who they still walk for. A vow makes a kind holy and the last of it taboo. A war is a keel on the glass and a beast in the window. A pact is a caravan. A denunciation empties a mouth. A luxury is a fish the street is unhappy without. Someone is writing the names down. A governor brings an edict. One named fish is the one the others follow. The Age of Quiet Water is not a banner. It is whether they stay.
 
-**The street is a court.** Other games put houses, marriages, schemes, and succession on a map you play as a person. Fin's does not open a character sheet. A surname is a house: a head, prestige, a kind they bag, a rival they will not stand next to. Two people come for a pair because they are taking vows. Fill it and the houses bind. A child inherits the window, not a title; someone of the same house says it is not theirs. A trait is why they walked — paranoid of the crowd, kind of the wet boards, greedy for a named line, honest about who took it. Someone on the aisle is waiting for someone else. A secret is a hook at the till. Friend, rival, lover, nemesis: two names, not a like. Someone claims a named fish by blood, and will not pay. One person breaks: they confess, they weep, they smash, the boards go wet. A house is laying a table, or a funeral, or a hunt. A child wanted the guppy. The aunt said no. They held someone under the keel; a pair lets them walk. The harbor is the one they pay. Tyranny is who still bags here.
+**The street is a court.** Other games put houses, marriages, schemes, and succession on a map you play as a person. Fin's does not open a character sheet. A surname is a house: a head, prestige, a kind they bag, a rival they will not stand next to. Two people come for a pair because they are taking vows. Fill it and the houses bind. A child inherits the window, not a title; someone of the same house says it is not theirs. A trait is why they walked: paranoid of the crowd, kind of the wet boards, greedy for a named line, honest about who took it. Someone on the aisle is waiting for someone else. A secret is a hook at the till. Friend, rival, lover, nemesis: two names, not a like. Someone claims a named fish by blood, and will not pay. One person breaks: they confess, they weep, they smash, the boards go wet. A house is laying a table, or a funeral, or a hunt. A child wanted the guppy. The aunt said no. They held someone under the keel; a pair lets them walk. The harbor is the one they pay. Tyranny is who still bags here.
 
 **The glass looks back.** Stand over the tank and they lean toward the hand. A customer on the aisle is a witness. A risen name watches harder, and wrong. That is not a meter. That is the shop looking at you.
 
@@ -104,7 +122,7 @@ Aquarium games give you a tank. Shop games give you a till. Idle games give you 
 | The hands | a stat that only goes up | a knot that rusts if you stop bagging |
 | The world | a multiplier, flavor text | a thousand-year atlas that still acts: a letter, a hall that empties the aisle, a settler, a wonder, a vow, a keel, a pact, a luxury, a golden age that is the street staying, a house that asks for a pair, a ransom under the keel, a liege who is the harbor |
 | The idle | a number in another tab | a room you can fail in while you are gone |
-| The sound | a loop | the water, singing what it has seen — and the windows on Salem |
+| The sound | a loop | the water, singing what it has seen, and the windows on Salem |
 | The line | a toast | one gold sentence of unfinished work |
 | The window | a backdrop | a shopfront the street can see into, and a legends screen for the object in it |
 
@@ -128,7 +146,7 @@ Or: the filter clogged overnight, the aisle is a dark ellipse on the boards, and
 
 | | What it is |
 |---|---|
-| **Tank** | the water. Click to feed. Click a fish for its card — name, thought, stress, who it swims with. Stand still and they come to the glass. |
+| **Tank** | the water. Click to feed. Click a fish for its card: name, thought, stress, who it swims with. Stand still and they come to the glass. |
 | **Shop** | the aisle. Rain on the window. People on the boards. The puddle, if there is one. This is where the sale happens, or does not. |
 | **Map** | the North End. Homes, trades, faiths, a reason to be on a block. Windows on Salem are tanks: a fish bag lights one. Click it. Some walk to your door. Some go to Haymarket. Some are at sea. |
 
@@ -140,7 +158,7 @@ The gold line under the name is always one unfinished thing. *Something is still
 
 ### The till is a run
 
-Two fish bags in a row is a temperature. Miss, and it breaks. Variable juice, not a loot table. There is no gacha, no pity timer, no disguised slot. A toast that fires on continue without a fish bag is a bug — the run starts this session.
+Two fish bags in a row is a temperature. Miss, and it breaks. Variable juice, not a loot table. There is no gacha, no pity timer, no disguised slot. A toast that fires on continue without a fish bag is a bug, the run starts this session.
 
 A fish bag has quality. String them and the hands remember. Someone will say the word masterwork, and tell the hall.
 
@@ -159,7 +177,7 @@ A fish bag has quality. String them and the hands remember. Someone will say the
 | Music (M) / Sounds (S) | the playlist, and the room. Mute the playlist if you want the choir. |
 | Hide (H) | the strip goes. the room stays |
 
-Work mode puts the same shop in a document's clothes — light ground, hairline rules, the blue a spreadsheet uses for a selected cell. The choir becomes the fluorescent hum. The water is still the water.
+Work mode puts the same shop in a document's clothes: light ground, hairline rules, the blue a spreadsheet uses for a selected cell. The choir becomes the fluorescent hum. The water is still the water.
 
 A play day is twenty minutes unless you follow the real clock. Seasons are twenty-eight days. The year does not run out.
 
@@ -169,7 +187,7 @@ A play day is twenty minutes unless you follow the real clock. Seasons are twent
 
 ### The tanks are not inventory
 
-Every fish has a name, a pedigree, and a thought. Not a label on a stack. A mind: needs, mood, stress, a few memories it will not drop. Some of that mind is learned — a small net per fish, gated, attentive, willing to copy what the tank next to it is doing. A fish that is holding too still (sick, or stressed) will not bag. You can have two goldfish and still have nothing to sell, because one of them is the last of a pair and the other is not well.
+Every fish has a name, a pedigree, and a thought. Not a label on a stack. A mind: needs, mood, stress, a few memories it will not drop. Some of that mind is learned, a small net per fish, gated, attentive, willing to copy what the tank next to it is doing. A fish that is holding too still (sick, or stressed) will not bag. You can have two goldfish and still have nothing to sell, because one of them is the last of a pair and the other is not well.
 
 Water is chemistry, not a tint. Ammonia, a filter that packs, ich that is an outbreak and not a mood. Feed less if the cycle is climbing. Heat if the room is following a cold street. Winter will punish an unheated tank. The Calendar is not flavor.
 
@@ -177,7 +195,7 @@ Name twenty and you have a secret. Read a thought, then open the Chronicle and s
 
 ### The choir
 
-The tank is a choir. Every living fish is a voice. Named fish carry the melody; unnamed ones sit under it. Sell a named one and a voice drops. Raise a name from the pages and it comes back a half-step off — the whole water, not just that one, because the shop heard it.
+The tank is a choir. Every living fish is a voice. Named fish carry the melody; unnamed ones sit under it. Sell a named one and a voice drops. Raise a name from the pages and it comes back a half-step off, the whole water, not just that one, because the shop heard it.
 
 The continent's weather lands here. Fever detunes. A beast off the harbor pulls the bed down. A boycott thins the chord. A bless from the old names sweetens it. A masterwork fish bag sits a hair prouder. People at the glass can hear the difference. They say so, or they look from the door.
 
@@ -217,7 +235,7 @@ You can type `/act` and do a thing in the street. The street heard it. Mood move
 
 ### The shop is porous
 
-A fish bag is not a deletion. They go home with someone on Salem. The baker already said it — *the last one is still in the bakery window* — and now it is true. If they live, she asks for another. If they breed, she brings the fry. If they die on the block, the name goes in the book from the street, not the glass. The choir can still hear a named one that left.
+A fish bag is not a deletion. They go home with someone on Salem. The baker already said it, *the last one is still in the bakery window*, and now it is true. If they live, she asks for another. If they breed, she brings the fry. If they die on the block, the name goes in the book from the street, not the glass. The choir can still hear a named one that left.
 
 Rain at the door is weather. The harbor at night is the sea. Spring tide, new moon or full, the water comes in under the boards by the door. Named fish lean with it. The aisle dries. The tide will be back at the next high.
 
@@ -235,7 +253,7 @@ Lock the door after last hour and the chronicle writes the tally. Year of the mi
 
 ### The year did not stop
 
-Present day is Year 1000. The atlas is not a locked book of flavor text. Historical figures still act. Facets inherit. Close blood has a cost — the record will let siblings marry, and the children can be sickly, or not arrive. Materials react: salt eats iron, oak rots, glass etches. A war on the far side of the water can raise the price of a word. You are not waiting for a credits screen. The clock does not cap at a real-world calendar year.
+Present day is Year 1000. The atlas is not a locked book of flavor text. Historical figures still act. Facets inherit. Close blood has a cost, the record will let siblings marry, and the children can be sickly, or not arrive. Materials react: salt eats iron, oak rots, glass etches. A war on the far side of the water can raise the price of a word. You are not waiting for a credits screen. The clock does not cap at a real-world calendar year.
 
 HUD, Chronicle, lots, Life and the Atlas all use the same year. Watching a year turn is a secret.
 
@@ -249,7 +267,7 @@ Opening it is a secret. Raising is another.
 
 ### What is looking back
 
-A difficulty director watches how you play — skill and calm, an ensemble that disagrees with itself on purpose. It does not hate you. It also does not flatten the room into a balanced tutorial. The water still packs. The baker still remembers.
+A difficulty director watches how you play: skill and calm, an ensemble that disagrees with itself on purpose. It does not hate you. It also does not flatten the room into a balanced tutorial. The water still packs. The baker still remembers.
 
 Secrets are hidden things: Konami, a name, midnight, the other book, a walk-out for a fish you did not have. Each one pays reputation and a pearl. Records on Level climb forever on numbers the shop already keeps. Legendaries are six late things that survive a restart. None of them multiply income, because that would just make the game shorter. Do not hunt them with a list in another window. The shop tells you.
 
@@ -267,7 +285,7 @@ Weather cools the room. The room stresses the named fish. A stressed fish will n
 
 ## A morning
 
-You open. Year 1000, a clear spring. Eighteen fish. Three of them have names. One of them was named by the person who kept this shop before you. The baker will say you're not them. The glass already has their etch on it. The gold line says the inland town is late — a war cut a road, and word has not arrived.
+You open. Year 1000, a clear spring. Eighteen fish. Three of them have names. One of them was named by the person who kept this shop before you. The baker will say you're not them. The glass already has their etch on it. The gold line says the inland town is late, a war cut a road, and word has not arrived.
 
 You click the water. You do not sell the last of a fish. The filter is clogging; you click it before the boards go dark. Someone comes in, asks for a tetra. You have two. The aisle is dry. Paper, then the register. The run is 1.
 
@@ -340,22 +358,22 @@ Boston is one port. Four more engines keep the rest of the continent. The choir 
 
 ## Three ways to play
 
-**In a tab.** Play at [sharpmeow.github.io/Fins](https://sharpmeow.github.io/Fins/), which the **pages** workflow publishes from `main`. Or serve `game/` yourself and open `index.html`. Same shop.
+**In a tab.** Play at [chasehendrick.github.io/Fins](https://chasehendrick.github.io/Fins/), which the **pages** workflow publishes from `main`. Or serve `game/` yourself and open `index.html`. Same shop.
 
-**As a window.** Chromium without the browser chrome. No tab sleeping. F11 is fullscreen. Mac, Windows, Linux — one source, three packages.
+**As a window.** Chromium without the browser chrome. No tab sleeping. F11 is fullscreen. Mac, Windows, Linux, one source, three packages.
 
 ```bash
-git clone https://github.com/SharpMeow/Fins.git
+git clone https://github.com/ChaseHendrick/Fins.git
 cd Fins
 npm install
 npm start
 ```
 
-**As a download.** Each version is on the [Releases](https://github.com/SharpMeow/Fins/releases) page. GitHub Actions builds the installers when a version tag such as `v1.0.0` is pushed, and attaches them to that release.
+**As a download.** Each version is on the [Releases](https://github.com/ChaseHendrick/Fins/releases) page. GitHub Actions builds the installers when a version tag such as `v1.0.0` is pushed, and attaches them to that release.
 
 | Machine | What you get |
 |---|---|
-| Mac | `.dmg` (unsigned — right-click, Open, the first time). The window still says Fin's. |
+| Mac | `.dmg` (unsigned, right-click, Open, the first time). The window still says Fin's. |
 | Windows | installer `.exe`, or a portable `.exe` |
 | Linux | `.AppImage` |
 
@@ -369,7 +387,7 @@ Click the water to feed. Click the filter when it sours. Keep two of the same fi
 
 Fin's is a game you serve from a folder, not a package you install into something else.
 
-**Use it when** the work is this shop: the water, the street, the daybook, the run, the choir. When a change has to show up in play — odds, speech, a wet floor, a voice dropping — not in a tab that nobody opens.
+**Use it when** the work is this shop: the water, the street, the daybook, the run, the choir. When a change has to show up in play through odds, speech, a wet floor, or a voice dropping, not in a tab that nobody opens.
 
 **Leave it when** you want a generic tycoon kit or a Store listing. The repo is public, but the license is not a free-for-all.
 
@@ -392,17 +410,22 @@ The layers live in `src/layers/`, one strict IIFE per file. `tools/build.mjs` bu
 npm run check:install   # once: eslint, esbuild, and a headless chromium
 npm run build           # after any change in src/, or after replacing fins.js
 npm run check
+npm run check:polish -- --out work/screenshots  # rooms, feeding, saves and display modes
 ```
 
-That is the same thing GitHub Actions runs on every pull request and every push to `main`.
+GitHub Actions runs the required `check` stages on every pull request and every push to `main`. The longer `check:polish` pass can also capture a visual review locally.
 
 | | What it catches |
 |---|---|
 | `check:syntax` | a file that does not parse, anywhere in `game/`, `src/`, `desktop/` or `tools/` |
+| `check:water` | spring propagation and settling, frame-rate agreement, bounded wakes, current advection, fish/food coupling and pause guards |
+| `check:folk` | the production person hook moving coordinates, confusing people across canvases, or dropping renderer arguments |
 | `check:build` | a committed bundle, or a `?v=` in `index.html`, that is not what the source builds to |
 | `check:wiring` | a layer no entry imports, one imported twice, a script tag pointing at a file that is not there, and a `?v=` that is not the hash of its file |
 | `check:lint` | the mistakes that are wrong rather than untidy. One rule per bug that has actually happened in here |
 | `check:boot` | the shop failing to open. It serves `game/`, starts a run in a real browser, walks past the opening cards, and fails on anything the page threw on the way |
+
+`check:polish` is an additional browser pass for the three rooms, actual feeding, tank switching, map selection, save reload, an eight-second keeper movement check, sprite contact sheet, both Work Mode themes, narrow layout and reduced motion. It can write screenshots with `--out`. Set `FINS_BROWSER_PATH` to use a locally installed Chromium browser.
 
 Four things worth knowing about that list.
 
