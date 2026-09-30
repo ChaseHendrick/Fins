@@ -4,7 +4,7 @@ Thanks for looking. Fin's is a game you serve from a folder, and the checks belo
 
 ## Run it
 
-- **In a browser:** serve `game/` with any static server (for example `npx serve game`) and open the page. Or play the published copy at [sharpmeow.github.io/Fins](https://sharpmeow.github.io/Fins/).
+- **In a browser:** serve `game/` with any static server (for example `npx serve game`) and open the page. Or play the published copy at [chasehendrick.github.io/Fins](https://chasehendrick.github.io/Fins/).
 - **As the desktop app:** `npm install`, then `npm start`.
 
 ## Where things live
